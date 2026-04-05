@@ -3,54 +3,97 @@ import 'adminProductos/admin_productos_page.dart';
 import 'Usuarios/admin_usuarios_page.dart';
 import '../auth/auth_page.dart';
 
+// CAMBIA ESTOS IMPORTS SI TUS ARCHIVOS TIENEN OTRO NOMBRE
+import 'despacho/despacho_page.dart';
+import 'despacho/historial_despacho_page.dart';
+
 class AdministradorPage extends StatelessWidget {
   final String adminName;
+  final String rol;
 
   const AdministradorPage({
     super.key,
     required this.adminName,
+    required this.rol,
+    
   });
 
   @override
   Widget build(BuildContext context) {
-    final List<_AdminOption> options = [
-      _AdminOption(
-        title: 'Usuarios',
-        icon: Icons.people_alt_rounded,
-        color: const Color(0xFF4A90E2),
-        page: const AdminUsuariosPage(),
-      ),
-      _AdminOption(
-        title: 'Productos',
-        icon: Icons.inventory_2_rounded,
-        color: const Color(0xFFF5A623),
-        page: const AdminProductosPage(),
-      ),
-      _AdminOption(
-        title: 'Pedidos',
-        icon: Icons.shopping_cart_checkout_rounded,
-        color: const Color(0xFF7ED321),
-        page: const AdminPedidosPage(),
-      ),
-      _AdminOption(
-        title: 'Promociones',
-        icon: Icons.campaign_rounded,
-        color: const Color(0xFFE91E63),
-        page: const AdminPromocionesPage(),
-      ),
-      _AdminOption(
-        title: 'Reportes',
-        icon: Icons.bar_chart_rounded,
-        color: const Color(0xFFBD10E0),
-        page: const AdminReportesPage(),
-      ),
-      _AdminOption(
-        title: 'Ajustes',
-        icon: Icons.settings_rounded,
-        color: const Color(0xFF4A4A4A),
-        page: const AdminConfiguracionPage(),
-      ),
-    ];
+    final String rolNormalizado = rol.toLowerCase().trim();
+
+    final bool esAdministrador =
+        rolNormalizado == 'administrador' || rolNormalizado == 'admin';
+
+    final bool esDespacho = rolNormalizado == 'despacho';
+
+    final List<_AdminOption> options = esAdministrador
+        ? [
+            _AdminOption(
+              title: 'Usuarios',
+              icon: Icons.people_alt_rounded,
+              color: const Color(0xFF4A90E2),
+              page: const AdminUsuariosPage(),
+            ),
+            _AdminOption(
+              title: 'Productos',
+              icon: Icons.inventory_2_rounded,
+              color: const Color(0xFFF5A623),
+              page: const AdminProductosPage(),
+            ),
+            _AdminOption(
+              title: 'Pedidos',
+              icon: Icons.shopping_cart_checkout_rounded,
+              color: const Color(0xFF7ED321),
+              page: const AdminPedidosPage(),
+            ),
+            _AdminOption(
+              title: 'Promociones',
+              icon: Icons.campaign_rounded,
+              color: const Color(0xFFE91E63),
+              page: const AdminPromocionesPage(),
+            ),
+            _AdminOption(
+              title: 'Reportes',
+              icon: Icons.bar_chart_rounded,
+              color: const Color(0xFFBD10E0),
+              page: const AdminReportesPage(),
+            ),
+            _AdminOption(
+              title: 'Ajustes',
+              icon: Icons.settings_rounded,
+              color: const Color(0xFF4A4A4A),
+              page: const AdminConfiguracionPage(),
+            ),
+            _AdminOption(
+              title: 'Despacho',
+              icon: Icons.local_shipping_rounded,
+              color: const Color(0xFF00ACC1),
+              page: const DespachoPage(),
+            ),
+            _AdminOption(
+              title: 'Historial de despacho',
+              icon: Icons.history_rounded,
+              color: const Color(0xFF8E24AA),
+              page: const HistorialDespachoPage(),
+            ),
+          ]
+        : esDespacho
+            ? [
+                _AdminOption(
+                  title: 'Despacho',
+                  icon: Icons.local_shipping_rounded,
+                  color: const Color(0xFF00ACC1),
+                  page: const DespachoPage(),
+                ),
+                _AdminOption(
+                  title: 'Historial de despacho',
+                  icon: Icons.history_rounded,
+                  color: const Color(0xFF8E24AA),
+                  page: const HistorialDespachoPage(),
+                ),
+              ]
+            : [];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -206,9 +249,13 @@ class AdministradorPage extends StatelessWidget {
                                       color: Colors.white.withAlpha(50),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
-                                    child: const Text(
-                                      'CEO / Administrador',
-                                      style: TextStyle(
+                                    child: Text(
+                                      esAdministrador
+                                          ? 'Administrador'
+                                          : esDespacho
+                                              ? 'Despacho'
+                                              : 'Usuario',
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
@@ -221,56 +268,62 @@ class AdministradorPage extends StatelessWidget {
                           ],
                         ),
                       ),
+
                       const SizedBox(height: 36),
-                      const Text(
-                        'Resumen de Hoy',
-                        style: TextStyle(
+
+                      if (esAdministrador) ...[
+                        const Text(
+                          'Resumen de Hoy',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF2C3E50),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _StatCard(
+                                title: 'Ventas',
+                                value: '\$450',
+                                icon: Icons.attach_money,
+                                color: Colors.green,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _StatCard(
+                                title: 'Pedidos',
+                                value: '12',
+                                icon: Icons.shopping_bag_outlined,
+                                color: Colors.orange,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _StatCard(
+                                title: 'Nuevos',
+                                value: '+5',
+                                icon: Icons.person_add_alt_1_rounded,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 36),
+                      ],
+
+                      Text(
+                        esDespacho ? 'Módulo de Despacho' : 'Gestión del Sistema',
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF2C3E50),
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _StatCard(
-                              title: 'Ventas',
-                              value: '\$450',
-                              icon: Icons.attach_money,
-                              color: Colors.green,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _StatCard(
-                              title: 'Pedidos',
-                              value: '12',
-                              icon: Icons.shopping_bag_outlined,
-                              color: Colors.orange,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _StatCard(
-                              title: 'Nuevos',
-                              value: '+5',
-                              icon: Icons.person_add_alt_1_rounded,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 36),
-                      const Text(
-                        'Gestión del Sistema',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF2C3E50),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
+
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),

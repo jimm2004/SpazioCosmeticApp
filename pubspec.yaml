@@ -22,9 +22,17 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # Librería para generar los íconos de la app
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
 
   assets:
     - assets/img/Logo.png
+
+# Configuración automática para inyectar tu logo en Android e iOS
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/img/Logo.png"

@@ -265,60 +265,66 @@ class _LoginPageState extends State<LoginPage> {
   bool loading = false;
   bool _obscurePassword = true;
 
-  Future<void> _login() async {
-    if (emailController.text.trim().isEmpty ||
-        passwordController.text.trim().isEmpty) {
-      showCustomDialog(
-        context,
-        title: "Campos Vacíos",
-        message: "Por favor, completa ambos campos",
-        isError: true,
-      );
-      return;
-    }
-
-    setState(() => loading = true);
-
-    try {
-      final result = await _authController.login(
-        emailController.text.trim(),
-        passwordController.text.trim(),
-      );
-
-      final String userName = result['name'] ?? 'Usuario';
-      final String role = result['role'] ?? 'cliente';
-
-      if (!mounted) return;
-
-      if (role == 'administrador') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AdministradorPage(adminName: userName),
-          ),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CatalogoPage(userName: userName),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        showCustomDialog(
-          context,
-          title: "Error de Login",
-          message: e.toString().replaceFirst('Exception: ', ''),
-          isError: true,
-        );
-      }
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
+Future<void> _login() async {
+  if (emailController.text.trim().isEmpty ||
+      passwordController.text.trim().isEmpty) {
+    showCustomDialog(
+      context,
+      title: "Campos Vacíos",
+      message: "Por favor, completa ambos campos",
+      isError: true,
+    );
+    return;
   }
 
+  setState(() => loading = true);
+
+  try {
+    final result = await _authController.login(
+      emailController.text.trim(),
+      passwordController.text.trim(),
+    );
+
+    final String userName = result['name'] ?? 'Usuario';
+    final String role = result['role'] ?? 'cliente';
+    final String rolNormalizado = role.toLowerCase().trim();
+
+    if (!mounted) return;
+
+    if (rolNormalizado == 'administrador' ||
+        rolNormalizado == 'admin' ||
+        rolNormalizado == 'despacho') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AdministradorPage(
+            adminName: userName,
+            rol: rolNormalizado,
+            
+          ),
+        ),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CatalogoPage(userName: userName),
+        ),
+      );
+    }
+  } catch (e) {
+    if (mounted) {
+      showCustomDialog(
+        context,
+        title: "Error de Login",
+        message: e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
+    }
+  } finally {
+    if (mounted) setState(() => loading = false);
+  }
+}
   @override
   void dispose() {
     emailController.dispose();
@@ -424,6 +430,8 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+
+
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
