@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../controllers/auth/auth_controller.dart';
-import '../../controllers/cart_controller.dart';
+import '../../controllers/catalogo/cart_controller.dart';
 import '../../controllers/catalogo/catalogo_controller.dart';
-import '../../widgets/shared/cart_modal.dart';
-import '../../widgets/shared/footer_section.dart';
-import '../../widgets/shared/product_detail_modal.dart';
-import '../../widgets/shared/product_grid.dart';
+import 'widgets/cart_modal.dart';
+import 'widgets/footer_section.dart';
+import 'widgets/product_detail_modal.dart';
+import 'widgets/product_grid.dart';
 import '../auth/auth_page.dart';
 
 class CatalogoPage extends StatefulWidget {

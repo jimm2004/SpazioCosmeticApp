@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../controllers/cart_controller.dart';
-import '../../pages/catalogo/checkout_page.dart';
+import '../../../controllers/catalogo/cart_controller.dart';
+import '../checkout_page.dart';
 // Si tienes una página separada para ver el carrito grande, descomenta esto
 // import '../../pages/catalogo/cart_page.dart';
 
