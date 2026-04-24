@@ -1,40 +1,43 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'api_service.dart';
 
 class UsuariosService {
-  final ApiService _apiService = ApiService();
-
-  String get _baseUrl => ApiService.baseUrl;
-
-  Map<String, String> get _headers {
-    final headers = <String, String>{
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    };
-
-    if (_apiService.token != null && _apiService.token!.isNotEmpty) {
-      headers['Authorization'] = 'Bearer ${_apiService.token}';
-    }
-
-    return headers;
-  }
+  final ApiService _api = ApiService();
 
   Future<List<dynamic>> obtenerUsuarios() async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/api/admin/usuarios'),
-      headers: _headers,
-    );
-
-    final data = _decode(response);
-
-    if (response.statusCode == 200) {
-      return data['users'] ?? [];
-    }
-
-    throw Exception(data['message'] ?? 'Error al obtener usuarios');
+    final data = await _api.get('/api/admin/usuarios');
+    return data['users'] ?? [];
   }
 
+  Future<List<dynamic>> obtenerClientes() async {
+    final data = await _api.get('/api/admin/usuarios');
+    return data['clientes'] ?? [];
+  }
+
+  Future<List<dynamic>> obtenerPersonalAdministrativo() async {
+    final data = await _api.get('/api/admin/usuarios');
+    return data['personal_administrativo'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> crearUsuario({
+    required String name,
+    required String email,
+    required String password,
+    required String passwordConfirmation,
+    required String role,
+  }) async {
+    return await _api.post(
+      '/api/admin/usuarios',
+      body: {
+        'name': name,
+        'email': email,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+        'role': role,
+      },
+    );
+  }
+
+  // Alias por compatibilidad con pantallas viejas
   Future<Map<String, dynamic>> crearUsuarioAdministrativo({
     required String name,
     required String email,
@@ -42,57 +45,29 @@ class UsuariosService {
     required String passwordConfirmation,
     required String role,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/api/admin/usuarios'),
-      headers: _headers,
-      body: jsonEncode({
-        'name': name,
-        'email': email,
-        'password': password,
-        'password_confirmation': passwordConfirmation,
-        'role': role,
-      }),
+    return await crearUsuario(
+      name: name,
+      email: email,
+      password: password,
+      passwordConfirmation: passwordConfirmation,
+      role: role,
     );
-
-    final data = _decode(response);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return data;
-    }
-
-    throw Exception(data['message'] ?? 'Error al crear usuario');
   }
 
-  // =========================================================
-  // NUEVO MÉTODO: CAMBIAR ESTADO DEL USUARIO (Activar/Desactivar)
-  // =========================================================
-  Future<String> cambiarEstadoUsuario(int id, bool activo) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/api/admin/usuarios/$id/estado'),
-      headers: _headers,
-      // Se envía el booleano al servidor para cambiar el estatus en BD
-      body: jsonEncode({'activo': activo}), 
+  Future<String> cambiarEstadoUsuario({
+    required int id,
+    required bool activo,
+    required String tipoUsuario,
+  }) async {
+    final data = await _api.post(
+      '/api/admin/usuarios/$id/estado',
+      body: {
+        'activo': activo,
+        'tipo_usuario': tipoUsuario,
+      },
     );
 
-    final data = _decode(response);
-    
-    if (response.statusCode == 200) {
-      return data['message']?.toString() ?? 'Estado actualizado correctamente';
-    }
-    
-    throw Exception(data['message'] ?? 'Error al cambiar el estado del usuario');
-  }
-
-  Map<String, dynamic> _decode(http.Response response) {
-    try {
-      final body = jsonDecode(response.body);
-      if (body is Map<String, dynamic>) return body;
-      return {'data': body};
-    } catch (e) {
-      return {
-        'message': 'Respuesta inválida del servidor',
-        'raw': response.body,
-      };
-    }
+    return data['message']?.toString() ??
+        'Estado actualizado correctamente';
   }
 }

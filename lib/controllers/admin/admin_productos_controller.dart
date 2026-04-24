@@ -1,40 +1,53 @@
 import 'dart:io';
+
 import '../../models/producto_admin_model.dart';
-import '../../services/api_service.dart';
+import '../../services/admin_productos_service.dart';
 
 class AdminProductosController {
-  final ApiService _apiService = ApiService();
+  final AdminProductosService _service = AdminProductosService();
 
   Future<List<ProductoAdminModel>> obtenerProductos() async {
-    final data = await _apiService.obtenerProductosAdmin();
+    final data = await _service.obtenerProductosAdmin();
+
     return data
-        .map<ProductoAdminModel>((e) => ProductoAdminModel.fromJson(e))
+        .map<ProductoAdminModel>(
+          (e) => ProductoAdminModel.fromJson(
+            Map<String, dynamic>.from(e),
+          ),
+        )
         .toList();
   }
 
   Future<ProductoAdminModel> obtenerDetalleProducto(int idProducto) async {
-    final data = await _apiService.obtenerDetalleProducto(idProducto);
-    return ProductoAdminModel.fromJson(data);
+    final data = await _service.obtenerDetalleProducto(idProducto);
+
+    return ProductoAdminModel.fromJson(
+      Map<String, dynamic>.from(data),
+    );
   }
 
   Future<String> subirImagenProducto({
     required int idProducto,
     required File imagen,
+    double? precioFinal,
+    bool? esPrincipal,
   }) async {
-    return await _apiService.subirImagenProducto(
+    final data = await _service.subirImagenProducto(
       idProducto: idProducto,
       imagen: imagen,
+      precioFinal: precioFinal,
+      esPrincipal: esPrincipal,
     );
+
+    return data['message']?.toString() ?? 'Imagen guardada correctamente';
   }
 
-  // MÉTODO CONECTADO A LA API REAL
   Future<String> cambiarVisibilidadProducto({
     required int idProducto,
     required bool esVisible,
   }) async {
-    // Aquí llamamos al método real de tu ApiService
-    return await _apiService.cambiarEstadoProducto(
-      idProducto: idProducto, 
+    return await _service.cambiarEstadoProducto(
+      idProducto: idProducto,
       activo: esVisible,
     );
   }

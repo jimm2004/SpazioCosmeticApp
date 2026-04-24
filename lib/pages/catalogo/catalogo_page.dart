@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../controllers/auth/auth_controller.dart';
-import '../../services/api_service.dart';
-import '../auth/auth_page.dart';
 import '../../controllers/cart_controller.dart';
-import '../../widgets/shared/product_detail_modal.dart';
+import '../../controllers/catalogo/catalogo_controller.dart';
 import '../../widgets/shared/cart_modal.dart';
-import '../../widgets/shared/product_grid.dart';
 import '../../widgets/shared/footer_section.dart';
+import '../../widgets/shared/product_detail_modal.dart';
+import '../../widgets/shared/product_grid.dart';
+import '../auth/auth_page.dart';
 
 class CatalogoPage extends StatefulWidget {
   final String userName;
 
-  const CatalogoPage({super.key, required this.userName});
+  const CatalogoPage({
+    super.key,
+    required this.userName,
+  });
 
   @override
   State<CatalogoPage> createState() => _CatalogoPageState();
@@ -20,74 +24,23 @@ class CatalogoPage extends StatefulWidget {
 
 class _CatalogoPageState extends State<CatalogoPage> {
   final String phone = "50578496665";
+
   final AuthController _authController = AuthController();
-  final ApiService _apiService = ApiService();
+  final CatalogoController _catalogoController = CatalogoController();
 
   late Future<List<Map<String, dynamic>>> _futureProductos;
 
   @override
   void initState() {
     super.initState();
-    _futureProductos = _obtenerProductosCatalogo();
-  }
-
-  bool _tieneFoto(dynamic value) {
-    final foto = (value ?? '').toString().trim();
-    return foto.isNotEmpty && foto.toLowerCase() != 'null';
-  }
-
-  double _toDouble(dynamic value) {
-    if (value == null) return 0;
-    if (value is num) return value.toDouble();
-    return double.tryParse(value.toString()) ?? 0;
-  }
-
-  String _formatearPrecio(dynamic value) {
-    final precio = _toDouble(value);
-    return '\$${precio.toStringAsFixed(2)}';
-  }
-
-  Future<List<Map<String, dynamic>>> _obtenerProductosCatalogo() async {
-    final List<dynamic> response = await _apiService.obtenerProductosAdmin();
-
-    final productos = response
-        .where((item) {
-          final activo = item['activo'];
-          final esActivo =
-              activo == 1 ||
-              activo == true ||
-              activo.toString() == '1' ||
-              activo.toString().toLowerCase() == 'true';
-
-          return esActivo && _tieneFoto(item['imagen_url']);
-        })
-        .map<Map<String, dynamic>>((item) {
-          return {
-            'id': item['id']?.toString() ?? '',
-            'nombre': (item['nombre'] ?? 'Producto sin nombre').toString(),
-            'descripcion':
-                (item['descripcion'] ?? 'Sin descripción disponible')
-                    .toString(),
-            'precio': _formatearPrecio(item['precio_venta']),
-            'precio_num': _toDouble(item['precio_venta']),
-            'rating': 5,
-            'descuento': null,
-            'img': item['imagen_url'].toString(),
-          };
-        })
-        .toList();
-
-    productos.sort(
-      (a, b) => a['nombre'].toString().compareTo(b['nombre'].toString()),
-    );
-
-    return productos;
+    _futureProductos = _catalogoController.listarProductosParaGrid();
   }
 
   Future<void> _recargarProductos() async {
     setState(() {
-      _futureProductos = _obtenerProductosCatalogo();
+      _futureProductos = _catalogoController.listarProductosParaGrid();
     });
+
     await _futureProductos;
   }
 
@@ -123,25 +76,24 @@ class _CatalogoPageState extends State<CatalogoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Color formalizado
+      backgroundColor: Colors.white,
       appBar: _buildAppBar(),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _launchWA(
           "Hola Spazio Cosmetic, me gustaría consultar sobre sus productos.",
         ),
-        backgroundColor: const Color(0xFF25D366), // Mantenemos el verde WhatsApp por usabilidad
+        backgroundColor: const Color(0xFF25D366),
         child: const Icon(Icons.chat, color: Colors.white),
       ),
       body: RefreshIndicator(
-        color: const Color(0xFFE91E63), // Indicador de carga rosa
+        color: const Color(0xFFE91E63),
         onRefresh: _recargarProductos,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
               const SizedBox(height: 30),
-              
-              // --- NUEVO ENCABEZADO FORMAL (Reemplaza a la bicicleta) ---
+
               const Text(
                 'PROFESSIONAL COSMETICS',
                 style: TextStyle(
@@ -151,7 +103,9 @@ class _CatalogoPageState extends State<CatalogoPage> {
                   letterSpacing: 4,
                 ),
               ),
+
               const SizedBox(height: 12),
+
               const Text(
                 'Catálogo Exclusivo',
                 style: TextStyle(
@@ -160,14 +114,22 @@ class _CatalogoPageState extends State<CatalogoPage> {
                   color: Colors.black,
                 ),
               ),
+
               const SizedBox(height: 8),
-              Text(
-                'Descubre productos disponibles y realiza tus pedidos de forma rápida.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Descubre productos disponibles y realiza tus pedidos de forma rápida.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
               ),
+
               const SizedBox(height: 40),
-              // -----------------------------------------------------------
 
               FutureBuilder<List<Map<String, dynamic>>>(
                 future: _futureProductos,
@@ -206,7 +168,7 @@ class _CatalogoPageState extends State<CatalogoPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            snapshot.error.toString(),
+                            snapshot.error.toString().replaceFirst('Exception: ', ''),
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: Colors.black54),
                           ),
@@ -290,7 +252,9 @@ class _CatalogoPageState extends State<CatalogoPage> {
                         onProductTap: (producto) {
                           showDialog(
                             context: context,
-                            builder: (context) => ProductDetailModal(producto: producto),
+                            builder: (_) => ProductDetailModal(
+                              producto: producto,
+                            ),
                           );
                         },
                       ),
@@ -298,6 +262,7 @@ class _CatalogoPageState extends State<CatalogoPage> {
                   );
                 },
               ),
+
               const SizedBox(height: 60),
               const FooterSection(),
             ],
@@ -337,7 +302,7 @@ class _CatalogoPageState extends State<CatalogoPage> {
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: Color(0xFFE91E63), // Rosa del theme
+                color: Color(0xFFE91E63),
               ),
             ),
           ),
@@ -346,11 +311,15 @@ class _CatalogoPageState extends State<CatalogoPage> {
           listenable: CartController.instance,
           builder: (context, _) {
             final count = CartController.instance.totalItems;
+
             return Stack(
               alignment: Alignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black),
+                  icon: const Icon(
+                    Icons.shopping_cart_outlined,
+                    color: Colors.black,
+                  ),
                   onPressed: () {
                     showModalBottomSheet(
                       context: context,
@@ -367,7 +336,7 @@ class _CatalogoPageState extends State<CatalogoPage> {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
-                        color: Color(0xFFE91E63), // Rosa del theme
+                        color: Color(0xFFE91E63),
                         shape: BoxShape.circle,
                       ),
                       constraints: const BoxConstraints(

@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
+
   factory ApiService() => _instance;
+
   ApiService._internal();
 
   static const String baseUrl =
@@ -14,7 +17,15 @@ class ApiService {
 
   String? token;
 
-  Map<String, String> get _headers {
+  void setToken(String? newToken) {
+    token = newToken;
+  }
+
+  void clearToken() {
+    token = null;
+  }
+
+  Map<String, String> get headers {
     final headers = <String, String>{
       'Accept': 'application/json',
       'Content-Type': 'application/json',
@@ -27,7 +38,7 @@ class ApiService {
     return headers;
   }
 
-  Map<String, String> get _authHeaders {
+  Map<String, String> get authMultipartHeaders {
     final headers = <String, String>{
       'Accept': 'application/json',
     };
@@ -39,206 +50,91 @@ class ApiService {
     return headers;
   }
 
-  Future<Map<String, dynamic>> login({
-    required String email,
-    required String password,
+  Uri uri(String path) {
+    return Uri.parse('$baseUrl$path');
+  }
+
+  Future<Map<String, dynamic>> get(String path) async {
+    final response = await http.get(
+      uri(path),
+      headers: headers,
+    );
+
+    return handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> post(
+    String path, {
+    Map<String, dynamic>? body,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/login'),
-      headers: _headers,
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-      }),
+      uri(path),
+      headers: headers,
+      body: jsonEncode(body ?? {}),
     );
 
-    final data = _decode(response);
-
-    if (response.statusCode == 200) {
-      token = data['token']?.toString();
-      return data;
-    }
-
-    throw Exception(data['message'] ?? 'Error en login');
+    return handleResponse(response);
   }
 
-  Future<Map<String, dynamic>> register({
-    required String name,
-    required String email,
-    required String password,
-    required String passwordConfirmation,
-  }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/register'),
-      headers: _headers,
-      body: jsonEncode({
-        'name': name,
-        'email': email,
-        'password': password,
-        'password_confirmation': passwordConfirmation,
-      }),
-    );
-
-    final data = _decode(response);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return data;
-    }
-
-    throw Exception(data['message'] ?? 'Error en registro');
-  }
-
-  Future<Map<String, dynamic>> forgotPassword({
-    required String email,
-  }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/forgot-password'),
-      headers: _headers,
-      body: jsonEncode({
-        'email': email,
-      }),
-    );
-
-    final data = _decode(response);
-
-    if (response.statusCode == 200) {
-      return data;
-    }
-
-    throw Exception(data['message'] ?? 'Error al solicitar recuperación');
-  }
-
-  Future<Map<String, dynamic>> getMe() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/me'),
-      headers: _headers,
-    );
-
-    final data = _decode(response);
-
-    if (response.statusCode == 200) {
-      return data;
-    }
-
-    throw Exception(data['message'] ?? 'Error obteniendo usuario');
-  }
-
-  Future<Map<String, dynamic>> logout() async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/logout'),
-      headers: _headers,
-    );
-
-    final data = _decode(response);
-
-    if (response.statusCode == 200) {
-      token = null;
-      return data;
-    }
-
-    throw Exception(data['message'] ?? 'Error al cerrar sesión');
-  }
-
-  // =========================================================
-  // PRODUCTOS ADMIN
-  // =========================================================
-
-  Future<List<dynamic>> obtenerProductosAdmin() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/admin/productos'),
-      headers: _headers,
-    );
-
-    final data = _decode(response);
-
-    if (response.statusCode == 200) {
-      return data['data'] ?? [];
-    }
-
-    throw Exception(data['message'] ?? 'Error al obtener productos');
-  }
-
-  Future<Map<String, dynamic>> obtenerDetalleProducto(int idProducto) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/admin/productos/$idProducto'),
-      headers: _headers,
-    );
-
-    final data = _decode(response);
-
-    if (response.statusCode == 200) {
-      return data['data'] ?? {};
-    }
-
-    throw Exception(
-      data['message'] ?? 'Error al obtener detalle del producto',
-    );
-  }
-
-  Future<String> subirImagenProducto({
-    required int idProducto,
-    required File imagen,
+  Future<Map<String, dynamic>> multipartPost(
+    String path, {
+    required String fileField,
+    required File file,
+    Map<String, String>? fields,
   }) async {
     final request = http.MultipartRequest(
       'POST',
-      Uri.parse('$baseUrl/api/admin/productos/$idProducto/imagen'),
+      uri(path),
     );
 
-    request.headers.addAll(_authHeaders);
+    request.headers.addAll(authMultipartHeaders);
 
-    final mimeTypeData =
-        lookupMimeType(imagen.path)?.split('/') ?? ['image', 'jpeg'];
+    if (fields != null) {
+      request.fields.addAll(fields);
+    }
+
+    final mimeTypeData = lookupMimeType(file.path)?.split('/') ??
+        ['image', 'jpeg'];
 
     request.files.add(
       await http.MultipartFile.fromPath(
-        'imagen',
-        imagen.path,
+        fileField,
+        file.path,
         contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
       ),
     );
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
-    final data = _decode(response);
 
-    if (response.statusCode == 200) {
-      return data['message']?.toString() ?? 'Imagen subida correctamente';
-    }
-
-    throw Exception(data['message'] ?? 'Error al subir imagen');
+    return handleResponse(response);
   }
 
-  // NUEVO MÉTODO: Ocultar o mostrar producto
-  Future<String> cambiarEstadoProducto({
-    required int idProducto,
-    required bool activo,
-  }) async {
-    final response = await http.post(
-      // Usamos el mismo prefijo /api/admin/productos/...
-      Uri.parse('$baseUrl/api/admin/productos/$idProducto/visibilidad'),
-      headers: _headers,
-      body: jsonEncode({
-        'activo': activo, // Flutter convierte el booleano a JSON automáticamente
-      }),
-    );
+  Map<String, dynamic> handleResponse(http.Response response) {
+    final data = decode(response);
 
-    final data = _decode(response);
-
-    if (response.statusCode == 200) {
-      // Si el servidor nos manda un mensaje personalizado, lo usamos. 
-      // Si no, mandamos nuestro propio mensaje de éxito.
-      return data['message']?.toString() ?? 
-          (activo ? 'Producto visible en el catálogo' : 'Producto oculto exitosamente');
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data;
     }
 
-    throw Exception(data['message'] ?? 'Error al cambiar visibilidad');
+    final message = data['message'] ??
+        data['error'] ??
+        'Error del servidor';
+
+    throw Exception(message);
   }
 
-  Map<String, dynamic> _decode(http.Response response) {
+  Map<String, dynamic> decode(http.Response response) {
     try {
       final body = jsonDecode(response.body);
-      if (body is Map<String, dynamic>) return body;
-      return {'data': body};
+
+      if (body is Map<String, dynamic>) {
+        return body;
+      }
+
+      return {
+        'data': body,
+      };
     } catch (e) {
       return {
         'message': 'Respuesta inválida del servidor',
