@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
@@ -19,39 +20,40 @@ class ApiService {
 
   void setToken(String? newToken) {
     token = newToken;
+    debugPrint('TOKEN GUARDADO: ${token != null && token!.isNotEmpty}');
   }
 
   void clearToken() {
     token = null;
   }
 
+  Uri uri(String path) {
+    return Uri.parse('$baseUrl$path');
+  }
+
   Map<String, String> get headers {
-    final headers = <String, String>{
+    final h = <String, String>{
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     };
 
     if (token != null && token!.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
+      h['Authorization'] = 'Bearer $token';
     }
 
-    return headers;
+    return h;
   }
 
-  Map<String, String> get authMultipartHeaders {
-    final headers = <String, String>{
+  Map<String, String> get multipartHeaders {
+    final h = <String, String>{
       'Accept': 'application/json',
     };
 
     if (token != null && token!.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
+      h['Authorization'] = 'Bearer $token';
     }
 
-    return headers;
-  }
-
-  Uri uri(String path) {
-    return Uri.parse('$baseUrl$path');
+    return h;
   }
 
   Future<Map<String, dynamic>> get(String path) async {
@@ -76,36 +78,61 @@ class ApiService {
     return handleResponse(response);
   }
 
+  Future<Map<String, dynamic>> put(
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
+    final response = await http.put(
+      uri(path),
+      headers: headers,
+      body: jsonEncode(body ?? {}),
+    );
+
+    return handleResponse(response);
+  }
+
   Future<Map<String, dynamic>> multipartPost(
     String path, {
     required String fileField,
     required File file,
     Map<String, String>? fields,
   }) async {
+    if (!await file.exists()) {
+      throw Exception('La imagen seleccionada no existe en el dispositivo.');
+    }
+
     final request = http.MultipartRequest(
       'POST',
       uri(path),
     );
 
-    request.headers.addAll(authMultipartHeaders);
+    request.headers.addAll(multipartHeaders);
 
-    if (fields != null) {
+    if (fields != null && fields.isNotEmpty) {
       request.fields.addAll(fields);
     }
 
-    final mimeTypeData = lookupMimeType(file.path)?.split('/') ??
-        ['image', 'jpeg'];
+    final mimeType = lookupMimeType(file.path) ?? 'image/jpeg';
+    final mimeParts = mimeType.split('/');
+
+    debugPrint('SUBIENDO IMAGEN A: ${uri(path)}');
+    debugPrint('MIME: $mimeType');
+    debugPrint('TOKEN EN MULTIPART: ${token != null && token!.isNotEmpty}');
+    debugPrint('FIELDS: ${fields ?? {}}');
 
     request.files.add(
       await http.MultipartFile.fromPath(
         fileField,
         file.path,
-        contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
+        contentType: MediaType(mimeParts[0], mimeParts[1]),
       ),
     );
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
+
+    debugPrint('STATUS MULTIPART: ${response.statusCode}');
+    debugPrint('BODY MULTIPART: ${response.body}');
 
     return handleResponse(response);
   }
@@ -117,9 +144,27 @@ class ApiService {
       return data;
     }
 
-    final message = data['message'] ??
-        data['error'] ??
+    String message = data['message']?.toString() ??
+        data['error']?.toString() ??
         'Error del servidor';
+
+    if (data['errors'] is Map) {
+      final errors = Map<String, dynamic>.from(data['errors']);
+
+      if (errors.isNotEmpty) {
+        final firstError = errors.values.first;
+
+        if (firstError is List && firstError.isNotEmpty) {
+          message = firstError.first.toString();
+        } else {
+          message = firstError.toString();
+        }
+      }
+    }
+
+    if (response.statusCode == 401) {
+      message = 'No autenticado. Cerrá sesión e iniciá sesión nuevamente.';
+    }
 
     throw Exception(message);
   }
@@ -135,9 +180,11 @@ class ApiService {
       return {
         'data': body,
       };
-    } catch (e) {
+    } catch (_) {
       return {
-        'message': 'Respuesta inválida del servidor',
+        'message': response.body.isEmpty
+            ? 'Respuesta vacía del servidor'
+            : 'Respuesta inválida del servidor',
         'raw': response.body,
       };
     }

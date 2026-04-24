@@ -49,6 +49,7 @@ class _AdminProductosPageState extends State<AdminProductosPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          backgroundColor: Colors.redAccent,
           content: Text(e.toString().replaceFirst('Exception: ', '')),
         ),
       );
@@ -61,7 +62,9 @@ class _AdminProductosPageState extends State<AdminProductosPage> {
     setState(() {
       filtrados = productos.where((p) {
         return p.nombre.toLowerCase().contains(q) ||
-            p.descripcion.toLowerCase().contains(q);
+            p.descripcion.toLowerCase().contains(q) ||
+            p.precioVenta.toString().contains(q) ||
+            p.precioFinal.toString().contains(q);
       }).toList();
     });
   }
@@ -80,6 +83,18 @@ class _AdminProductosPageState extends State<AdminProductosPage> {
     );
 
     await cargarProductos();
+  }
+
+  int get productosConFotos {
+    return productos.where((p) => p.totalImagenes > 0).length;
+  }
+
+  int get productosSinFotos {
+    return productos.where((p) => p.totalImagenes == 0).length;
+  }
+
+  int get productosVisibles {
+    return productos.where((p) => p.activo ?? true).length;
   }
 
   @override
@@ -111,7 +126,7 @@ class _AdminProductosPageState extends State<AdminProductosPage> {
               margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.05),
@@ -155,27 +170,37 @@ class _AdminProductosPageState extends State<AdminProductosPage> {
 
                   return Column(
                     children: [
+                      AdminProductosStatsHeader(
+                        total: productos.length,
+                        visibles: productosVisibles,
+                        conFotos: productosConFotos,
+                        sinFotos: productosSinFotos,
+                      ),
                       AdminProductoSearchBox(
                         controller: searchController,
                         onClear: _limpiarBuscador,
                       ),
-                      const SizedBox(height: 10),
                       Expanded(
                         child: RefreshIndicator(
                           color: const Color(0xFF5E35B1),
                           onRefresh: cargarProductos,
                           child: filtrados.isEmpty
                               ? const ProductoEmptyState()
-                              : isGridView
-                                  ? ProductoGridView(
-                                      productos: filtrados,
-                                      crossAxisCount: crossAxisCount,
-                                      onTapProducto: _navegarDetalle,
-                                    )
-                                  : ProductoListView(
-                                      productos: filtrados,
-                                      onTapProducto: _navegarDetalle,
-                                    ),
+                              : AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 250),
+                                  child: isGridView
+                                      ? ProductoGridView(
+                                          key: const ValueKey('grid'),
+                                          productos: filtrados,
+                                          crossAxisCount: crossAxisCount,
+                                          onTapProducto: _navegarDetalle,
+                                        )
+                                      : ProductoListView(
+                                          key: const ValueKey('list'),
+                                          productos: filtrados,
+                                          onTapProducto: _navegarDetalle,
+                                        ),
+                                ),
                         ),
                       ),
                     ],

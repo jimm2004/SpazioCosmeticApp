@@ -12,7 +12,8 @@ class AdminProductosService {
 
   Future<Map<String, dynamic>> obtenerDetalleProducto(int idProducto) async {
     final data = await _api.get('/api/admin/productos/$idProducto');
-    return data['data'] ?? {};
+
+    return Map<String, dynamic>.from(data['data'] ?? {});
   }
 
   Future<Map<String, dynamic>> subirImagenProducto({
@@ -36,6 +37,42 @@ class AdminProductosService {
       fileField: 'imagen',
       file: imagen,
       fields: fields,
+    );
+  }
+
+  Future<Map<String, dynamic>> cambiarImagenProducto({
+    required int imagenId,
+    required File imagen,
+    double? precioFinal,
+    bool? esPrincipal,
+  }) async {
+    final fields = <String, String>{};
+
+    if (precioFinal != null) {
+      fields['precio_final'] = precioFinal.toString();
+    }
+
+    if (esPrincipal != null) {
+      fields['es_principal'] = esPrincipal ? '1' : '0';
+    }
+
+    return await _api.multipartPost(
+      '/api/admin/productos/imagenes/$imagenId/cambiar-imagen',
+      fileField: 'imagen',
+      file: imagen,
+      fields: fields,
+    );
+  }
+
+  Future<Map<String, dynamic>> actualizarPrecioFinalImagen({
+    required int imagenId,
+    required double precioFinal,
+  }) async {
+    return await _api.put(
+      '/api/admin/productos/imagenes/$imagenId/precio-final',
+      body: {
+        'precio_final': precioFinal,
+      },
     );
   }
 

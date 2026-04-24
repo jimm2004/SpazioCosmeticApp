@@ -23,17 +23,52 @@ class AdminProductoDetallePage extends StatefulWidget {
 class _AdminProductoDetallePageState extends State<AdminProductoDetallePage> {
   final AdminProductosController _controller = AdminProductosController();
   final ImagePicker _picker = ImagePicker();
+  final TextEditingController precioFinalController = TextEditingController();
 
   ProductoAdminModel? producto;
+
   bool loading = true;
   bool subiendo = false;
-  File? imagenSeleccionada;
   bool esVisible = true;
+
+  File? imagenSeleccionada;
+
+  // 1 = foto principal, 2 = foto secundaria
+  int slotSeleccionado = 1;
 
   @override
   void initState() {
     super.initState();
     cargarDetalle();
+  }
+
+  ProductoImagenAdminModel? _imagenPorSlot(
+    ProductoAdminModel p,
+    int slot,
+  ) {
+    if (slot == 1 && p.imagenes.isNotEmpty) {
+      return p.imagenes[0];
+    }
+
+    if (slot == 2 && p.imagenes.length > 1) {
+      return p.imagenes[1];
+    }
+
+    return null;
+  }
+
+  void _setPrecioSegunSlot(ProductoAdminModel p, int slot) {
+    final imagenExistente = _imagenPorSlot(p, slot);
+
+    if (imagenExistente != null) {
+      precioFinalController.text =
+          imagenExistente.precioFinal.toStringAsFixed(2);
+      return;
+    }
+
+    precioFinalController.text = p.precioFinal > 0
+        ? p.precioFinal.toStringAsFixed(2)
+        : p.precioVenta.toStringAsFixed(2);
   }
 
   Future<void> cargarDetalle() async {
@@ -50,6 +85,7 @@ class _AdminProductoDetallePageState extends State<AdminProductoDetallePage> {
         producto = detalle;
         esVisible = detalle.activo ?? true;
         loading = false;
+        _setPrecioSegunSlot(detalle, slotSeleccionado);
       });
     } catch (e) {
       if (!mounted) return;
@@ -58,6 +94,7 @@ class _AdminProductoDetallePageState extends State<AdminProductoDetallePage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          backgroundColor: Colors.redAccent,
           content: Text(e.toString().replaceFirst('Exception: ', '')),
         ),
       );
@@ -90,10 +127,60 @@ class _AdminProductoDetallePageState extends State<AdminProductoDetallePage> {
     }
   }
 
-  Future<void> subirImagen() async {
-    if (imagenSeleccionada == null) {
+  void quitarImagenSeleccionada() {
+    setState(() {
+      imagenSeleccionada = null;
+    });
+  }
+
+  double? _obtenerPrecioFinal() {
+    final texto = precioFinalController.text.trim();
+
+    if (texto.isEmpty) return null;
+
+    final limpio = texto.replaceAll(',', '.');
+
+    return double.tryParse(limpio);
+  }
+
+  Future<void> guardarCambiosImagenPrecio() async {
+    final p = producto;
+
+    if (p == null) return;
+
+    final precioFinal = _obtenerPrecioFinal();
+
+    if (precioFinal == null || precioFinal <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona una imagen primero')),
+        const SnackBar(
+          backgroundColor: Colors.orange,
+          content: Text('Ingresa un precio final válido.'),
+        ),
+      );
+      return;
+    }
+
+    final imagenExistente = _imagenPorSlot(p, slotSeleccionado);
+    final ranuraOcupada = imagenExistente != null;
+
+    if (!ranuraOcupada && imagenSeleccionada == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.orange,
+          content: Text('Selecciona una imagen para esta ranura.'),
+        ),
+      );
+      return;
+    }
+
+    if (!ranuraOcupada && p.totalImagenes >= 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.orange,
+          content: Text(
+            'Este producto ya tiene 2 fotos. Selecciona una ranura ocupada para cambiarla.',
+          ),
+        ),
       );
       return;
     }
@@ -101,10 +188,31 @@ class _AdminProductoDetallePageState extends State<AdminProductoDetallePage> {
     setState(() => subiendo = true);
 
     try {
-      final msg = await _controller.subirImagenProducto(
-        idProducto: widget.idProducto,
-        imagen: imagenSeleccionada!,
-      );
+      String msg;
+
+      if (ranuraOcupada && imagenSeleccionada != null) {
+        // Caso 1: ranura ocupada + imagen nueva = cambiar imagen y precio.
+        msg = await _controller.cambiarImagenProducto(
+          imagenId: imagenExistente.id,
+          imagen: imagenSeleccionada!,
+          precioFinal: precioFinal,
+          esPrincipal: slotSeleccionado == 1,
+        );
+      } else if (ranuraOcupada && imagenSeleccionada == null) {
+        // Caso 2: ranura ocupada + sin imagen nueva = solo editar precio final.
+        msg = await _controller.actualizarPrecioFinalImagen(
+          imagenId: imagenExistente.id,
+          precioFinal: precioFinal,
+        );
+      } else {
+        // Caso 3: ranura vacía + imagen nueva = subir nueva imagen.
+        msg = await _controller.subirImagenProducto(
+          idProducto: widget.idProducto,
+          imagen: imagenSeleccionada!,
+          precioFinal: precioFinal,
+          esPrincipal: slotSeleccionado == 1,
+        );
+      }
 
       if (!mounted) return;
 
@@ -161,10 +269,28 @@ class _AdminProductoDetallePageState extends State<AdminProductoDetallePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: Colors.redAccent,
-          content: Text('Error al cambiar visibilidad'),
+          content: Text('Error al cambiar visibilidad.'),
         ),
       );
     }
+  }
+
+  void seleccionarSlot(int slot) {
+    final p = producto;
+
+    if (p == null) return;
+
+    setState(() {
+      slotSeleccionado = slot;
+      imagenSeleccionada = null;
+      _setPrecioSegunSlot(p, slot);
+    });
+  }
+
+  @override
+  void dispose() {
+    precioFinalController.dispose();
+    super.dispose();
   }
 
   @override
@@ -189,6 +315,9 @@ class _AdminProductoDetallePageState extends State<AdminProductoDetallePage> {
       );
     }
 
+    final imagenExistente = _imagenPorSlot(p, slotSeleccionado);
+    final ranuraOcupada = imagenExistente != null;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
@@ -209,27 +338,50 @@ class _AdminProductoDetallePageState extends State<AdminProductoDetallePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ProductoImagePreview(
+            ProductoAndroidHeader(producto: p),
+            const SizedBox(height: 20),
+
+            ProductoPhotoSlots(
+              producto: p,
+              slotSeleccionado: slotSeleccionado,
               imagenSeleccionada: imagenSeleccionada,
-              imagenUrl: p.imagenUrl,
+              onSelectSlot: seleccionarSlot,
             ),
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 20),
+
+            PrecioFinalEditorCard(
+              controller: precioFinalController,
+              precioVenta: p.precioVenta,
+              enabled: !subiendo,
+              ranuraOcupada: ranuraOcupada,
+              tieneImagenNueva: imagenSeleccionada != null,
+            ),
+
+            const SizedBox(height: 20),
 
             ProductoInfoSection(producto: p),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
             ProductoVisibilityCard(
               esVisible: esVisible,
               onChanged: _toggleVisibilidad,
             ),
-            const SizedBox(height: 30),
+
+            const SizedBox(height: 20),
 
             ProductoImageActions(
               subiendo: subiendo,
+              totalImagenes: p.totalImagenes,
+              slotSeleccionado: slotSeleccionado,
+              ranuraOcupada: ranuraOcupada,
+              tieneImagenSeleccionada: imagenSeleccionada != null,
               onTomarFoto: tomarFoto,
               onElegirGaleria: elegirDeGaleria,
-              onSubirImagen: subirImagen,
+              onQuitarImagenSeleccionada: quitarImagenSeleccionada,
+              onGuardarCambios: guardarCambiosImagenPrecio,
             ),
+
             const SizedBox(height: 40),
           ],
         ),

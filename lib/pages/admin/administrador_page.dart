@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+
 import 'adminProductos/admin_productos_page.dart';
 import 'Usuarios/admin_usuarios_page.dart';
 import '../auth/auth_page.dart';
 
-// CAMBIA ESTOS IMPORTS SI TUS ARCHIVOS TIENEN OTRO NOMBRE
 import 'despacho/despacho_page.dart';
 import 'despacho/historial_despacho_page.dart';
 
@@ -15,7 +15,6 @@ class AdministradorPage extends StatelessWidget {
     super.key,
     required this.adminName,
     required this.rol,
-    
   });
 
   @override
@@ -31,374 +30,204 @@ class AdministradorPage extends StatelessWidget {
         ? [
             _AdminOption(
               title: 'Usuarios',
-              icon: Icons.people_alt_rounded,
-              color: const Color(0xFF4A90E2),
+              subtitle: 'Gestiona personal administrativo',
+              icon: Icons.admin_panel_settings_rounded,
+              color: const Color(0xFF5E35B1),
               page: const AdminUsuariosPage(),
+              tag: 'Admin',
             ),
             _AdminOption(
               title: 'Productos',
+              subtitle: 'Fotos, precios y visibilidad',
               icon: Icons.inventory_2_rounded,
               color: const Color(0xFFF5A623),
               page: const AdminProductosPage(),
+              tag: 'Catálogo',
             ),
             _AdminOption(
               title: 'Pedidos',
+              subtitle: 'Control de pedidos realizados',
               icon: Icons.shopping_cart_checkout_rounded,
-              color: const Color(0xFF7ED321),
+              color: const Color(0xFF00A86B),
               page: const AdminPedidosPage(),
+              tag: 'Ventas',
             ),
             _AdminOption(
               title: 'Promociones',
+              subtitle: 'Banners y novedades',
               icon: Icons.campaign_rounded,
               color: const Color(0xFFE91E63),
               page: const AdminPromocionesPage(),
+              tag: 'Marketing',
             ),
             _AdminOption(
               title: 'Reportes',
+              subtitle: 'Métricas y análisis',
               icon: Icons.bar_chart_rounded,
-              color: const Color(0xFFBD10E0),
+              color: const Color(0xFF8E24AA),
               page: const AdminReportesPage(),
+              tag: 'KPI',
             ),
             _AdminOption(
               title: 'Ajustes',
+              subtitle: 'Configuración general',
               icon: Icons.settings_rounded,
-              color: const Color(0xFF4A4A4A),
+              color: const Color(0xFF455A64),
               page: const AdminConfiguracionPage(),
+              tag: 'Sistema',
             ),
             _AdminOption(
               title: 'Despacho',
+              subtitle: 'Preparación y salida',
               icon: Icons.local_shipping_rounded,
               color: const Color(0xFF00ACC1),
               page: const DespachoPage(),
+              tag: 'Operación',
             ),
             _AdminOption(
-              title: 'Historial de despacho',
+              title: 'Historial',
+              subtitle: 'Registro de despachos',
               icon: Icons.history_rounded,
-              color: const Color(0xFF8E24AA),
+              color: const Color(0xFF3949AB),
               page: const HistorialDespachoPage(),
+              tag: 'Archivo',
             ),
           ]
         : esDespacho
             ? [
                 _AdminOption(
                   title: 'Despacho',
+                  subtitle: 'Preparación y salida',
                   icon: Icons.local_shipping_rounded,
                   color: const Color(0xFF00ACC1),
                   page: const DespachoPage(),
+                  tag: 'Operación',
                 ),
                 _AdminOption(
-                  title: 'Historial de despacho',
+                  title: 'Historial',
+                  subtitle: 'Registro de despachos',
                   icon: Icons.history_rounded,
-                  color: const Color(0xFF8E24AA),
+                  color: const Color(0xFF3949AB),
                   page: const HistorialDespachoPage(),
+                  tag: 'Archivo',
                 ),
               ]
             : [];
 
+    final String roleLabel = esAdministrador
+        ? 'Administrador Total'
+        : esDespacho
+            ? 'Encargado de Despacho'
+            : 'Usuario sin rol administrativo';
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Panel de Control',
-          style: TextStyle(
-            color: Color(0xFF2C3E50),
-            fontWeight: FontWeight.w800,
-            fontSize: 22,
-            letterSpacing: -0.5,
-          ),
-        ),
-        centerTitle: false,
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.redAccent.withAlpha(25),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-              tooltip: 'Cerrar sesión',
-              onPressed: () async {
-                if (context.mounted) {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AuthHomePage()),
-                    (route) => false,
-                  );
-                }
-              },
-            ),
-          ),
-        ],
-      ),
+      backgroundColor: const Color(0xFFF4F6FB),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             int crossAxisCount = 2;
-            double childAspectRatio = 1.1;
+            double childAspectRatio = 0.92;
 
-            if (constraints.maxWidth >= 900) {
+            if (constraints.maxWidth >= 1100) {
               crossAxisCount = 4;
-              childAspectRatio = 1.3;
-            } else if (constraints.maxWidth >= 600) {
+              childAspectRatio = 1.08;
+            } else if (constraints.maxWidth >= 760) {
               crossAxisCount = 3;
-              childAspectRatio = 1.2;
+              childAspectRatio = 1.02;
             }
 
             return Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1100),
-                child: SingleChildScrollView(
+                constraints: const BoxConstraints(maxWidth: 1180),
+                child: CustomScrollView(
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 10.0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(28),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF5E35B1), Color(0xFF8E24AA)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF5E35B1).withAlpha(100),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+                        child: _TopBar(
+                          onLogout: () => _confirmLogout(context),
                         ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 80,
-                              height: 80,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withAlpha(38),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child: Image.asset(
-                                  'assets/img/Logo.png',
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(
-                                    Icons.storefront_rounded,
-                                    size: 40,
-                                    color: Color(0xFF5E35B1),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 24),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    '¡Hola de nuevo!',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    adminName,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: -0.5,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withAlpha(50),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      esAdministrador
-                                          ? 'Administrador'
-                                          : esDespacho
-                                              ? 'Despacho'
-                                              : 'Usuario',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                      ),
+                    ),
+
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
+                        child: _DashboardHero(
+                          adminName: adminName,
+                          roleLabel: roleLabel,
+                          esAdministrador: esAdministrador,
+                          esDespacho: esDespacho,
+                        ),
+                      ),
+                    ),
+
+                    if (esAdministrador)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
+                          child: _AdminMetricsPanel(
+                            totalModules: options.length,
+                          ),
                         ),
                       ),
 
-                      const SizedBox(height: 36),
-
-                      if (esAdministrador) ...[
-                        const Text(
-                          'Resumen de Hoy',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF2C3E50),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _StatCard(
-                                title: 'Ventas',
-                                value: '\$450',
-                                icon: Icons.attach_money,
-                                color: Colors.green,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _StatCard(
-                                title: 'Pedidos',
-                                value: '12',
-                                icon: Icons.shopping_bag_outlined,
-                                color: Colors.orange,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _StatCard(
-                                title: 'Nuevos',
-                                value: '+5',
-                                icon: Icons.person_add_alt_1_rounded,
-                                color: Colors.blue,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 36),
-                      ],
-
-                      Text(
-                        esDespacho ? 'Módulo de Despacho' : 'Gestión del Sistema',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF2C3E50),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _SectionHeader(
+                          title: esDespacho
+                              ? 'Centro de despacho'
+                              : 'Centro de administración',
+                          subtitle: esDespacho
+                              ? 'Accesos habilitados para gestión operativa.'
+                              : 'Accesos principales del sistema Spazio.',
                         ),
                       ),
-                      const SizedBox(height: 16),
+                    ),
 
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: options.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: 20,
-                          mainAxisSpacing: 20,
-                          childAspectRatio: childAspectRatio,
-                        ),
-                        itemBuilder: (context, index) {
-                          final option = options[index];
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: 14),
+                    ),
 
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(10),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(24),
-                                highlightColor: option.color.withAlpha(12),
-                                splashColor: option.color.withAlpha(25),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => option.page),
+                    options.isEmpty
+                        ? SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: _NoAccessState(roleLabel: roleLabel),
+                          )
+                        : SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+                            sliver: SliverGrid(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final option = options[index];
+
+                                  return _ModuleCard(
+                                    option: option,
+                                    index: index,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => option.page,
+                                        ),
+                                      );
+                                    },
                                   );
                                 },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(16),
-                                        decoration: BoxDecoration(
-                                          color: option.color.withAlpha(30),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          option.icon,
-                                          size: 34,
-                                          color: option.color,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        option.title,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF2C3E50),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                childCount: options.length,
+                              ),
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: childAspectRatio,
                               ),
                             ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
+                          ),
+                  ],
                 ),
               ),
             );
@@ -407,56 +236,285 @@ class AdministradorPage extends StatelessWidget {
       ),
     );
   }
+
+  void _confirmLogout(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+          title: const Text(
+            'Cerrar sesión',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          content: const Text(
+            '¿Seguro que deseas salir del panel administrativo?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AuthHomePage()),
+                  (route) => false,
+                );
+              },
+              icon: const Icon(Icons.logout_rounded),
+              label: const Text('Salir'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final MaterialColor color;
+class _TopBar extends StatelessWidget {
+  final VoidCallback onLogout;
 
-  const _StatCard({
-    required this.title,
-    required this.value,
+  const _TopBar({
+    required this.onLogout,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(
+          child: Text(
+            'Spazio Admin',
+            style: TextStyle(
+              color: Color(0xFF2C3E50),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.8,
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(10),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: IconButton(
+            tooltip: 'Cerrar sesión',
+            onPressed: onLogout,
+            icon: const Icon(
+              Icons.logout_rounded,
+              color: Colors.redAccent,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DashboardHero extends StatelessWidget {
+  final String adminName;
+  final String roleLabel;
+  final bool esAdministrador;
+  final bool esDespacho;
+
+  const _DashboardHero({
+    required this.adminName,
+    required this.roleLabel,
+    required this.esAdministrador,
+    required this.esDespacho,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color roleColor = esAdministrador
+        ? const Color(0xFFE91E63)
+        : esDespacho
+            ? const Color(0xFF00ACC1)
+            : Colors.grey;
+
+    final IconData roleIcon = esAdministrador
+        ? Icons.admin_panel_settings_rounded
+        : esDespacho
+            ? Icons.local_shipping_rounded
+            : Icons.person_off_rounded;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF15172B),
+            Color(0xFF5E35B1),
+            Color(0xFFE91E63),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF5E35B1).withAlpha(70),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -18,
+            top: -18,
+            child: Icon(
+              Icons.auto_awesome_rounded,
+              size: 130,
+              color: Colors.white.withAlpha(20),
+            ),
+          ),
+          Row(
+            children: [
+              Container(
+                width: 76,
+                height: 76,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Image.asset(
+                  'assets/img/Logo.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) {
+                    return const Icon(
+                      Icons.storefront_rounded,
+                      size: 42,
+                      color: Color(0xFF5E35B1),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _saludoDinamico(),
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(210),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      adminName.isEmpty ? 'Usuario' : adminName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _HeroBadge(
+                          icon: roleIcon,
+                          label: roleLabel,
+                          color: roleColor,
+                        ),
+                        const _HeroBadge(
+                          icon: Icons.verified_rounded,
+                          label: 'Sesión activa',
+                          color: Color(0xFF00C853),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _saludoDinamico() {
+    final hour = DateTime.now().hour;
+
+    if (hour < 12) return 'Buenos días,';
+    if (hour < 18) return 'Buenas tardes,';
+    return 'Buenas noches,';
+  }
+}
+
+class _HeroBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _HeroBadge({
     required this.icon,
+    required this.label,
     required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(8),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(
+        horizontal: 11,
+        vertical: 7,
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(45),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: Colors.white.withAlpha(40)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color.shade400, size: 32),
-          const SizedBox(height: 12),
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 6),
           Text(
-            value,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: color.shade700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
+            label,
             style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.black54,
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -465,17 +523,364 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+class _AdminMetricsPanel extends StatelessWidget {
+  final int totalModules;
+
+  const _AdminMetricsPanel({
+    required this.totalModules,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _MetricCard(
+            icon: Icons.dashboard_customize_rounded,
+            title: 'Módulos',
+            value: '$totalModules',
+            color: const Color(0xFF5E35B1),
+          ),
+        ),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: _MetricCard(
+            icon: Icons.inventory_2_rounded,
+            title: 'Catálogo',
+            value: 'Activo',
+            color: Color(0xFFF5A623),
+          ),
+        ),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: _MetricCard(
+            icon: Icons.security_rounded,
+            title: 'Acceso',
+            value: 'Total',
+            color: Color(0xFFE91E63),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MetricCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final Color color;
+
+  const _MetricCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 92),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(8),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w900,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            title,
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SectionHeader({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          height: 38,
+          width: 5,
+          decoration: BoxDecoration(
+            color: const Color(0xFF5E35B1),
+            borderRadius: BorderRadius.circular(99),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFF2C3E50),
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ModuleCard extends StatelessWidget {
+  final _AdminOption option;
+  final int index;
+  final VoidCallback onTap;
+
+  const _ModuleCard({
+    required this.option,
+    required this.index,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool largeStyle = index == 0 || index == 1;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(26),
+        splashColor: option.color.withAlpha(30),
+        highlightColor: option.color.withAlpha(12),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(
+              color: option.color.withAlpha(26),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: option.color.withAlpha(18),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -18,
+                bottom: -18,
+                child: Icon(
+                  option.icon,
+                  size: largeStyle ? 112 : 92,
+                  color: option.color.withAlpha(18),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(13),
+                          decoration: BoxDecoration(
+                            color: option.color.withAlpha(28),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Icon(
+                            option.icon,
+                            color: option.color,
+                            size: 28,
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: option.color.withAlpha(20),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            option.tag,
+                            style: TextStyle(
+                              color: option.color,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Text(
+                      option.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF2C3E50),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      option.subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12.5,
+                        height: 1.25,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Text(
+                          'Abrir módulo',
+                          style: TextStyle(
+                            color: option.color,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          color: option.color,
+                          size: 17,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoAccessState extends StatelessWidget {
+  final String roleLabel;
+
+  const _NoAccessState({
+    required this.roleLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(26),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(26),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.lock_person_rounded,
+              size: 70,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Acceso no disponible',
+              style: TextStyle(
+                color: Color(0xFF2C3E50),
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'El rol "$roleLabel" no tiene módulos administrativos asignados.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _AdminOption {
   final String title;
+  final String subtitle;
   final IconData icon;
   final Widget page;
   final Color color;
+  final String tag;
 
-  _AdminOption({
+  const _AdminOption({
     required this.title,
+    required this.subtitle,
     required this.icon,
     required this.page,
     required this.color,
+    required this.tag,
   });
 }
 
@@ -487,7 +892,7 @@ class AdminPedidosPage extends StatelessWidget {
         title: 'Pedidos',
         message: 'Visualiza y procesa los pedidos realizados.',
         icon: Icons.shopping_cart_checkout_rounded,
-        color: Colors.green,
+        color: Color(0xFF00A86B),
       );
 }
 
@@ -499,7 +904,7 @@ class AdminPromocionesPage extends StatelessWidget {
         title: 'Promociones',
         message: 'Crea banners y novedades para el catálogo.',
         icon: Icons.campaign_rounded,
-        color: Colors.pinkAccent,
+        color: Color(0xFFE91E63),
       );
 }
 
@@ -511,7 +916,7 @@ class AdminReportesPage extends StatelessWidget {
         title: 'Reportes',
         message: 'Mira las analíticas y métricas de venta.',
         icon: Icons.bar_chart_rounded,
-        color: Colors.purpleAccent,
+        color: Color(0xFF8E24AA),
       );
 }
 
@@ -523,7 +928,7 @@ class AdminConfiguracionPage extends StatelessWidget {
         title: 'Configuración',
         message: 'Ajustes generales del sistema.',
         icon: Icons.settings_rounded,
-        color: Colors.blueGrey,
+        color: Color(0xFF455A64),
       );
 }
 
@@ -543,12 +948,12 @@ class _AdminBasePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF4F6FB),
       appBar: AppBar(
         title: Text(
           title,
           style: const TextStyle(
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w900,
             color: Color(0xFF2C3E50),
           ),
         ),
@@ -558,59 +963,74 @@ class _AdminBasePage extends StatelessWidget {
       ),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(28),
-                decoration: BoxDecoration(
-                  color: color.withAlpha(25),
-                  shape: BoxShape.circle,
+          padding: const EdgeInsets.all(24),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 430),
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(10),
+                  blurRadius: 16,
+                  offset: const Offset(0, 7),
                 ),
-                child: Icon(icon, size: 80, color: color),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF2C3E50),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back_rounded),
-                label: const Text(
-                  'Volver al Dashboard',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: color,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 28,
-                    vertical: 16,
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(24),
+                    borderRadius: BorderRadius.circular(26),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
+                  child: Icon(icon, size: 76, color: color),
                 ),
-              ),
-            ],
+                const SizedBox(height: 22),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey.shade600,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    label: const Text(
+                      'Volver al panel',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: color,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

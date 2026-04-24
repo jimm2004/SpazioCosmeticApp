@@ -27,17 +27,31 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
     searchController.addListener(_filterUsers);
   }
 
+  bool _esPersonalAdministrativo(Map<String, dynamic> user) {
+    final tipo = (user['tipo_usuario'] ?? '').toString().toLowerCase();
+    final role = (user['role'] ?? '').toString().toLowerCase();
+
+    return tipo == 'personal_administrativo' ||
+        role == 'administrador' ||
+        role == 'despacho';
+  }
+
   Future<void> loadUsers() async {
     setState(() => isLoading = true);
 
     try {
       final data = await _controller.obtenerUsuarios();
 
+      final administrativos = data
+          .where((u) => _esPersonalAdministrativo(u))
+          .map((u) => Map<String, dynamic>.from(u))
+          .toList();
+
       if (!mounted) return;
 
       setState(() {
-        users = data;
-        filteredUsers = _applyFilter(data, searchController.text);
+        users = administrativos;
+        filteredUsers = _applyFilter(administrativos, searchController.text);
         isLoading = false;
       });
     } catch (e) {
@@ -89,13 +103,12 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
     }
 
     final bool isActivo = usuarioActivo(user);
-    final String tipoUsuario = usuarioTipo(user);
 
     try {
       final msg = await _controller.cambiarEstadoUsuario(
         id: userId,
         activo: !isActivo,
-        tipoUsuario: tipoUsuario,
+        tipoUsuario: 'personal_administrativo',
       );
 
       if (!mounted) return;
@@ -131,6 +144,12 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
     }
   }
 
+  int get totalAdministrativos => users.length;
+
+  int get totalActivos => users.where(usuarioActivo).length;
+
+  int get totalInactivos => users.where((u) => !usuarioActivo(u)).length;
+
   @override
   void dispose() {
     searchController.dispose();
@@ -150,7 +169,7 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
           backgroundColor: const Color(0xFFF5F7FA),
           appBar: AppBar(
             title: const Text(
-              'Personal del Sistema',
+              'Personal Administrativo',
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 color: Color(0xFF2C3E50),
@@ -160,13 +179,13 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
             backgroundColor: Colors.transparent,
             elevation: 0,
             iconTheme: const IconThemeData(color: Color(0xFF2C3E50)),
-            bottom: const TabBar(
-              labelColor: Color(0xFF5E35B1),
+            bottom: TabBar(
+              labelColor: const Color(0xFF5E35B1),
               unselectedLabelColor: Colors.grey,
-              indicatorColor: Color(0xFF5E35B1),
+              indicatorColor: const Color(0xFF5E35B1),
               tabs: [
-                Tab(text: 'Activos'),
-                Tab(text: 'Inactivos'),
+                Tab(text: 'Activos ($totalActivos)'),
+                Tab(text: 'Inactivos ($totalInactivos)'),
               ],
             ),
           ),
@@ -174,11 +193,11 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
             onPressed: openCreateUserDialog,
             backgroundColor: const Color(0xFF5E35B1),
             icon: const Icon(
-              Icons.person_add_alt_1_rounded,
+              Icons.admin_panel_settings_rounded,
               color: Colors.white,
             ),
             label: const Text(
-              'Nuevo',
+              'Nuevo administrativo',
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -193,6 +212,11 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
                 )
               : Column(
                   children: [
+                    UsuariosHeaderStats(
+                      total: totalAdministrativos,
+                      activos: totalActivos,
+                      inactivos: totalInactivos,
+                    ),
                     UsuariosSearchBox(
                       controller: searchController,
                       onClear: () {
@@ -205,13 +229,15 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
                         children: [
                           UsuariosList(
                             users: activos,
-                            emptyMessage: 'No hay usuarios activos.',
+                            emptyMessage:
+                                'No hay personal administrativo activo.',
                             onToggle: _toggleUserStatus,
                             onRefresh: loadUsers,
                           ),
                           UsuariosList(
                             users: inactivos,
-                            emptyMessage: 'No hay usuarios desactivados.',
+                            emptyMessage:
+                                'No hay personal administrativo inactivo.',
                             onToggle: _toggleUserStatus,
                             onRefresh: loadUsers,
                           ),
@@ -224,4 +250,4 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
       ),
     );
   }
-}
+} 

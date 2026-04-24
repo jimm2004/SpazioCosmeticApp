@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'api_service.dart';
 
 class AuthService {
@@ -19,8 +21,14 @@ class AuthService {
 
     final token = data['token']?.toString();
 
+    debugPrint('LOGIN RESPONSE TOKEN EXISTE: ${token != null && token.isNotEmpty}');
+    debugPrint('TIPO USUARIO: ${data['tipo_usuario']}');
+    debugPrint('USER ROLE: ${data['user']?['role']}');
+
     if (token != null && token.isNotEmpty) {
       _api.setToken(token);
+    } else {
+      throw Exception('Login correcto, pero el servidor no devolvió token.');
     }
 
     return data;
@@ -45,6 +53,8 @@ class AuthService {
     );
 
     final token = data['token']?.toString();
+
+    debugPrint('REGISTER TOKEN EXISTE: ${token != null && token.isNotEmpty}');
 
     if (token != null && token.isNotEmpty) {
       _api.setToken(token);
