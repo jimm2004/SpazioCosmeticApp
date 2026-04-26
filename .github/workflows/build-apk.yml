@@ -1,0 +1,43 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches:
+      - main
+      - desarrollador
+      - Janil
+      - anderson
+      - jander
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Instalar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Limpiar proyecto
+        run: flutter clean
+
+      - name: Volver a instalar dependencias
+        run: flutter pub get
+
+      - name: Construir APK
+        run: flutter build apk --release
+
+      - name: Subir APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpazioCosmeticApp-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
