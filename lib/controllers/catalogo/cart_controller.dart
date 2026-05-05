@@ -1,119 +1,111 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
-class CartItem {
-  final Map<String, dynamic> producto;
-  int cantidad;
-
-  CartItem({
-    required this.producto,
-    this.cantidad = 1,
-  });
-
-  String get id => (producto['id'] ?? '').toString();
-  String get nombre => (producto['nombre'] ?? '').toString();
-  String get precioTexto => (producto['precio'] ?? '\$0.00').toString();
-
-  double get precioNumero {
-    final raw = producto['precio_num'] ?? 0;
-    if (raw is num) return raw.toDouble();
-    return double.tryParse(raw.toString()) ?? 0;
-  }
-
-  String get imagen => (producto['img'] ?? '').toString();
-  String get descripcion => (producto['descripcion'] ?? '').toString();
-
-  double get subtotal => precioNumero * cantidad;
-}
+import '../../models/catalogo/carrito_model.dart';
+import '../../services/catalogo_service.dart';
 
 class CartController extends ChangeNotifier {
-  CartController._();
-  static final CartController instance = CartController._();
+  static final CartController instance = CartController._internal();
+  CartController._internal();
 
-  final List<CartItem> _items = [];
+  final CatalogoService _service = CatalogoService();
 
-  List<CartItem> get items => List.unmodifiable(_items);
+  CarritoModel? cart;
+  bool loading = false;
+  String? error;
 
-  int get totalItems =>
-      _items.fold(0, (total, item) => total + item.cantidad);
+  int get totalItems => cart?.totalItems ?? 0;
+  double get subtotal => cart?.subtotal ?? 0;
+  double get total => subtotal;
+  List<CarritoItemModel> get items => cart?.items ?? [];
 
-  double get total =>
-      _items.fold(0, (total, item) => total + item.subtotal);
-
-  int cantidadDeProducto(String id) {
-    final index = _items.indexWhere((item) => item.id == id);
-    if (index == -1) return 0;
-    return _items[index].cantidad;
+  Future<void> cargarCarrito() async {
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      cart = await _service.verCarrito();
+    } catch (e) {
+      error = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
   }
 
-  bool estaEnCarrito(String id) => cantidadDeProducto(id) > 0;
-
-  void addProducto(
-    Map<String, dynamic> producto, {
+  Future<bool> agregarProducto({
+    required int productoMasterId,
+    int? productoImagenId,
     int cantidad = 1,
-  }) {
-    final id = (producto['id'] ?? '').toString();
-    if (id.isEmpty) return;
-
-    final index = _items.indexWhere((item) => item.id == id);
-
-    if (index >= 0) {
-      _items[index].cantidad += cantidad;
-    } else {
-      _items.add(
-        CartItem(
-          producto: producto,
-          cantidad: cantidad,
-        ),
-      );
-    }
-
+  }) async {
+    loading = true;
+    error = null;
     notifyListeners();
-  }
-
-  void aumentar(String id) {
-    final index = _items.indexWhere((item) => item.id == id);
-    if (index >= 0) {
-      _items[index].cantidad++;
+    try {
+      cart = await _service.agregarAlCarrito(
+        productoMasterId: productoMasterId,
+        productoImagenId: productoImagenId,
+        cantidad: cantidad,
+      );
+      return true;
+    } catch (e) {
+      error = e.toString().replaceFirst('Exception: ', '');
+      return false;
+    } finally {
+      loading = false;
       notifyListeners();
     }
   }
 
-  void disminuir(String id) {
-    final index = _items.indexWhere((item) => item.id == id);
-    if (index >= 0) {
-      if (_items[index].cantidad > 1) {
-        _items[index].cantidad--;
-      } else {
-        _items.removeAt(index);
-      }
+  Future<bool> editarCantidad(int detalleId, int cantidad) async {
+    if (cantidad <= 0) return quitarItem(detalleId);
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      cart = await _service.editarItemCarrito(detalleId: detalleId, cantidad: cantidad);
+      return true;
+    } catch (e) {
+      error = e.toString().replaceFirst('Exception: ', '');
+      return false;
+    } finally {
+      loading = false;
       notifyListeners();
     }
   }
 
-  void eliminar(String id) {
-    _items.removeWhere((item) => item.id == id);
+  Future<bool> quitarItem(int detalleId) async {
+    loading = true;
+    error = null;
     notifyListeners();
-  }
-
-  void limpiar() {
-    _items.clear();
-    notifyListeners();
-  }
-
-  String resumenParaWhatsApp() {
-    final buffer = StringBuffer();
-    buffer.writeln('Hola, este es mi carrito:');
-    buffer.writeln('');
-
-    for (final item in _items) {
-      buffer.writeln(
-        '- ${item.nombre} x${item.cantidad} = \$${item.subtotal.toStringAsFixed(2)}',
-      );
+    try {
+      cart = await _service.quitarItemCarrito(detalleId);
+      return true;
+    } catch (e) {
+      error = e.toString().replaceFirst('Exception: ', '');
+      return false;
+    } finally {
+      loading = false;
+      notifyListeners();
     }
+  }
 
-    buffer.writeln('');
-    buffer.writeln('Total: \$${total.toStringAsFixed(2)}');
+  Future<bool> limpiar() async {
+    return vaciarCarrito();
+  }
 
-    return buffer.toString();
+  Future<bool> vaciarCarrito() async {
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      cart = await _service.vaciarCarrito();
+      return true;
+    } catch (e) {
+      error = e.toString().replaceFirst('Exception: ', '');
+      return false;
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
   }
 }
