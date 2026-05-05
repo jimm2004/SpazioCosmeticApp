@@ -1,70 +1,71 @@
-import '../../models/producto_catalogo_model.dart';
+import 'package:flutter/foundation.dart';
+
+import '../../models/catalogo/novedad_publica_model.dart';
+import '../../models/catalogo/producto_catalogo_model.dart';
 import '../../services/catalogo_service.dart';
 
-class CatalogoController {
+class CatalogoController extends ChangeNotifier {
   final CatalogoService _service = CatalogoService();
 
-  Future<List<ProductoCatalogoModel>> listarProductos() async {
-    final data = await _service.listarProductos();
+  List<ProductoCatalogo> productos = [];
+  List<NovedadPublicaModel> novedades = [];
+  bool loading = false;
+  String? error;
 
-    return data
-        .where((e) => e is Map)
-        .map<ProductoCatalogoModel>(
-          (e) => ProductoCatalogoModel.fromJson(
-            Map<String, dynamic>.from(e as Map),
-          ),
-        )
-        .where((producto) => producto.activo && producto.tieneImagen)
-        .toList();
-  }
-
-  Future<ProductoCatalogoModel> obtenerProducto(int idProducto) async {
-    if (idProducto <= 0) {
-      throw Exception('ID de producto inválido.');
+  Future<void> cargarInicio() async {
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      final result = await Future.wait([
+        _service.obtenerProductos(),
+        _service.obtenerNovedades(),
+      ]);
+      productos = result[0] as List<ProductoCatalogo>;
+      novedades = result[1] as List<NovedadPublicaModel>;
+    } catch (e) {
+      error = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      loading = false;
+      notifyListeners();
     }
-
-    final data = await _service.obtenerProducto(idProducto);
-
-    return ProductoCatalogoModel.fromJson(data);
   }
 
-  Future<List<ProductoCatalogoModel>> buscarProductosPorNombre(String nombre) async {
-    final texto = nombre.trim();
-
-    if (texto.isEmpty) {
-      return listarProductos();
+  Future<void> buscar(String query) async {
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      productos = query.trim().isEmpty
+          ? await _service.obtenerProductos()
+          : await _service.buscarProductos(query.trim());
+    } catch (e) {
+      error = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      loading = false;
+      notifyListeners();
     }
-
-    final data = await _service.buscarProductosPorNombre(texto);
-
-    return data
-        .where((e) => e is Map)
-        .map<ProductoCatalogoModel>(
-          (e) => ProductoCatalogoModel.fromJson(
-            Map<String, dynamic>.from(e as Map),
-          ),
-        )
-        .where((producto) => producto.activo && producto.tieneImagen)
-        .toList();
   }
 
-  Future<List<Map<String, dynamic>>> listarProductosParaGrid() async {
-    final productos = await listarProductos();
-
-    productos.sort(
-      (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()),
-    );
-
-    return productos.map((p) => p.toProductCardMap()).toList();
+  List<String> get categorias {
+    final set = <String>{'Todos'};
+    for (final p in productos) {
+      set.add(p.categoriaNombre);
+    }
+    return set.toList();
   }
 
-  Future<List<Map<String, dynamic>>> buscarProductosParaGrid(String nombre) async {
-    final productos = await buscarProductosPorNombre(nombre);
+  Map<String, List<ProductoCatalogo>> productosPorCategoria(String filtro) {
+    final source = filtro == 'Todos'
+        ? productos
+        : productos.where((p) => p.categoriaNombre.toLowerCase() == filtro.toLowerCase()).toList();
 
-    productos.sort(
-      (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()),
-    );
-
-    return productos.map((p) => p.toProductCardMap()).toList();
+    final map = <String, List<ProductoCatalogo>>{};
+    for (final p in source) {
+      if (p.imagenPrincipal.isEmpty) continue;
+      map.putIfAbsent(p.categoriaNombre, () => []);
+      map[p.categoriaNombre]!.add(p);
+    }
+    return map;
   }
 }

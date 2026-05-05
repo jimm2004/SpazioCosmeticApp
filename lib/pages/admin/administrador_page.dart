@@ -6,6 +6,7 @@ import '../auth/auth_page.dart';
 
 import 'despacho/despacho_page.dart';
 import 'despacho/historial_despacho_page.dart';
+import 'novedades/admin_novedades_page.dart';
 
 class AdministradorPage extends StatelessWidget {
   final String adminName;
@@ -53,11 +54,11 @@ class AdministradorPage extends StatelessWidget {
               tag: 'Ventas',
             ),
             _AdminOption(
-              title: 'Promociones',
+              title: 'Novedades',
               subtitle: 'Banners y novedades',
               icon: Icons.campaign_rounded,
               color: const Color(0xFFE91E63),
-              page: const AdminPromocionesPage(),
+              page: const AdminNovedadesPage(),
               tag: 'Marketing',
             ),
             _AdminOption(
@@ -296,7 +297,7 @@ class _TopBar extends StatelessWidget {
       children: [
         const Expanded(
           child: Text(
-            'Spazio Admin',
+            'Spazio Cosmetic Admin',
             style: TextStyle(
               color: Color(0xFF2C3E50),
               fontSize: 24,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../controllers/auth/auth_controller.dart';
 import '../../mail/forgot_password_dialog.dart';
+import '../../services/api_service.dart';
 import '../admin/administrador_page.dart';
 import '../catalogo/catalogo_page.dart';
 import 'widgets/auth_widgets.dart';
@@ -26,8 +27,8 @@ class _LoginPageState extends State<LoginPage> {
         passwordController.text.trim().isEmpty) {
       showCustomDialog(
         context,
-        title: "Campos Vacíos",
-        message: "Por favor, completa ambos campos",
+        title: 'Campos Vacíos',
+        message: 'Por favor, completa ambos campos',
         isError: true,
       );
       return;
@@ -41,9 +42,29 @@ class _LoginPageState extends State<LoginPage> {
         passwordController.text.trim(),
       );
 
-      final String userName = result['name'] ?? 'Usuario';
-      final String role = result['role'] ?? 'cliente';
+      debugPrint('LOGIN RESULT: $result');
+
+      final String token = (result['token'] ??
+              result['access_token'] ??
+              result['plainTextToken'] ??
+              result['plain_text_token'] ??
+              '')
+          .toString();
+
+      if (token.isEmpty) {
+        throw Exception(
+          'Login correcto, pero el servidor no devolvió token de sesión.',
+        );
+      }
+
+      ApiService().setToken(token);
+
+      final String userName = result['name']?.toString() ?? 'Usuario';
+      final String role = result['role']?.toString() ?? 'cliente';
       final String rolNormalizado = role.toLowerCase().trim();
+
+      debugPrint('TOKEN SETEADO: ${ApiService().token != null && ApiService().token!.isNotEmpty}');
+      debugPrint('ROL NORMALIZADO: $rolNormalizado');
 
       if (!mounted) return;
 
@@ -68,10 +89,12 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } catch (e) {
+      debugPrint('ERROR LOGIN REAL: $e');
+
       if (mounted) {
         showCustomDialog(
           context,
-          title: "Error de Login",
+          title: 'Error de Login',
           message: e.toString().replaceFirst('Exception: ', ''),
           isError: true,
         );
@@ -109,14 +132,12 @@ class _LoginPageState extends State<LoginPage> {
                 style: TextStyle(color: Colors.grey[600], fontSize: 16),
               ),
               const SizedBox(height: 32),
-
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: buildInputDecoration('Correo electrónico'),
               ),
               const SizedBox(height: 16),
-
               TextField(
                 controller: passwordController,
                 obscureText: _obscurePassword,
@@ -137,20 +158,18 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
-
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () =>
                       showForgotPasswordDialog(context, _authController),
                   child: const Text(
-                    "¿Olvidaste tu contraseña?",
+                    '¿Olvidaste tu contraseña?',
                     style: TextStyle(color: Color(0xFFE91E63)),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-
               ElevatedButton(
                 onPressed: loading ? null : _login,
                 style: ElevatedButton.styleFrom(

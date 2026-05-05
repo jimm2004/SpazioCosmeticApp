@@ -24,7 +24,19 @@ class AuthController {
       password: clave,
     );
 
-    final user = response['user'] ?? {};
+    debugPrint('AUTH RESPONSE LOGIN: $response');
+
+    final user = response['user'] is Map
+        ? Map<String, dynamic>.from(response['user'])
+        : <String, dynamic>{};
+
+    final token = response['token']?.toString() ??
+        response['access_token']?.toString() ??
+        response['plainTextToken']?.toString() ??
+        response['plain_text_token']?.toString() ??
+        response['data']?['token']?.toString() ??
+        response['data']?['access_token']?.toString() ??
+        '';
 
     return {
       'id': user['id'],
@@ -35,7 +47,7 @@ class AuthController {
       'tipo_usuario': response['tipo_usuario']?.toString() ??
           user['tipo_usuario']?.toString() ??
           'cliente',
-      'token': response['token']?.toString() ?? '',
+      'token': token,
       'message': response['message']?.toString() ?? '',
     };
   }
@@ -85,8 +97,6 @@ class AuthController {
       passwordConfirmation: confirmarClave,
     );
 
-    // El registro ya quedó guardado en Laravel.
-    // El correo se intenta enviar, pero si falla no bloquea el registro.
     try {
       await sendWelcomeEmail(
         correo,
@@ -206,7 +216,9 @@ class AuthController {
   Future<Map<String, dynamic>> me() async {
     final response = await _authService.getMe();
 
-    final user = response['user'] ?? {};
+    final user = response['user'] is Map
+        ? Map<String, dynamic>.from(response['user'])
+        : <String, dynamic>{};
 
     return {
       'id': user['id'],
