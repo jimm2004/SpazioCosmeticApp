@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../controllers/auth/auth_controller.dart';
-import '../pages/auth/widgets/auth_widgets.dart';
+import '../../controllers/auth/auth_controller.dart';
+import '../../pages/auth/widgets/auth_widgets.dart';
 
 void showForgotPasswordDialog(
   BuildContext context,

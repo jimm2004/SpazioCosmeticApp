@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/auth/auth_controller.dart';
-import '../../mail/forgot_password_dialog.dart';
+import '../../models/mail/forgot_password_dialog.dart';
 import '../../services/api_service.dart';
 import '../admin/administrador_page.dart';
+import '../admin/contabilidad/administracion_contable_page.dart';
 import '../catalogo/catalogo_page.dart';
 import 'widgets/auth_widgets.dart';
 
@@ -23,8 +24,10 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
 
   Future<void> _login() async {
-    if (emailController.text.trim().isEmpty ||
-        passwordController.text.trim().isEmpty) {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
       showCustomDialog(
         context,
         title: 'Campos Vacíos',
@@ -37,10 +40,7 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => loading = true);
 
     try {
-      final result = await _authController.login(
-        emailController.text.trim(),
-        passwordController.text.trim(),
-      );
+      final result = await _authController.login(email, password);
 
       debugPrint('LOGIN RESULT: $result');
 
@@ -59,18 +59,41 @@ class _LoginPageState extends State<LoginPage> {
 
       ApiService().setToken(token);
 
-      final String userName = result['name']?.toString() ?? 'Usuario';
-      final String role = result['role']?.toString() ?? 'cliente';
-      final String rolNormalizado = role.toLowerCase().trim();
+      final String userName =
+          result['name']?.toString().trim().isNotEmpty == true
+              ? result['name'].toString()
+              : 'Usuario';
 
-      debugPrint('TOKEN SETEADO: ${ApiService().token != null && ApiService().token!.isNotEmpty}');
+      final String role = (result['role'] ??
+              result['rol'] ??
+              result['tipo_usuario'] ??
+              'cliente')
+          .toString();
+
+      final String rolNormalizado = _normalizarRol(role);
+
+      debugPrint(
+        'TOKEN SETEADO: ${ApiService().token != null && ApiService().token!.isNotEmpty}',
+      );
+      debugPrint('ROL ORIGINAL: $role');
       debugPrint('ROL NORMALIZADO: $rolNormalizado');
 
       if (!mounted) return;
 
-      if (rolNormalizado == 'administrador' ||
-          rolNormalizado == 'admin' ||
-          rolNormalizado == 'despacho') {
+      if (_esContabilidad(rolNormalizado)) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdministracionContablePage(
+              adminName: userName,
+              rol: rolNormalizado,
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (_esAdministradorOBodega(rolNormalizado)) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -80,14 +103,15 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CatalogoPage(userName: userName),
-          ),
-        );
+        return;
       }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CatalogoPage(userName: userName),
+        ),
+      );
     } catch (e) {
       debugPrint('ERROR LOGIN REAL: $e');
 
@@ -102,6 +126,34 @@ class _LoginPageState extends State<LoginPage> {
     } finally {
       if (mounted) setState(() => loading = false);
     }
+  }
+
+  String _normalizarRol(String role) {
+    return role
+        .toLowerCase()
+        .trim()
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('-', '_')
+        .replaceAll(' ', '_');
+  }
+
+  bool _esContabilidad(String rol) {
+    return rol == 'administracion_contable' ||
+        rol == 'contabilidad' ||
+        rol == 'admin_contable' ||
+        rol == 'administrativo_contable';
+  }
+
+  bool _esAdministradorOBodega(String rol) {
+    return rol == 'administrador' ||
+        rol == 'admin' ||
+        rol == 'despacho' ||
+        rol == 'bodega' ||
+        rol == 'supervisor_bodega';
   }
 
   @override
@@ -122,25 +174,43 @@ class _LoginPageState extends State<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 20),
+
               const Text(
                 '¡Hola de nuevo!',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
+
               const SizedBox(height: 8),
+
               Text(
                 'Ingresa tus credenciales para continuar.',
-                style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 16,
+                ),
               ),
+
               const SizedBox(height: 32),
+
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
                 decoration: buildInputDecoration('Correo electrónico'),
               ),
+
               const SizedBox(height: 16),
+
               TextField(
                 controller: passwordController,
                 obscureText: _obscurePassword,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) {
+                  if (!loading) _login();
+                },
                 decoration: buildInputDecoration(
                   'Contraseña',
                   suffixIcon: IconButton(
@@ -158,18 +228,27 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
+
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () =>
-                      showForgotPasswordDialog(context, _authController),
+                  onPressed: loading
+                      ? null
+                      : () => showForgotPasswordDialog(
+                            context,
+                            _authController,
+                          ),
                   child: const Text(
                     '¿Olvidaste tu contraseña?',
-                    style: TextStyle(color: Color(0xFFE91E63)),
+                    style: TextStyle(
+                      color: Color(0xFFE91E63),
+                    ),
                   ),
                 ),
               ),
+
               const SizedBox(height: 16),
+
               ElevatedButton(
                 onPressed: loading ? null : _login,
                 style: ElevatedButton.styleFrom(
