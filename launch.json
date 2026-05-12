@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter Web fijo",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--web-hostname", "0.0.0.0",
+        "--web-port", "55474"
+      ]
+    }
+  ]
+}

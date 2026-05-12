@@ -11,6 +11,7 @@ class AdminPedidosController extends ChangeNotifier {
   bool loading = false;
   String? error;
   String? lastMessage;
+
   AdminPedidosResumen resumen = const AdminPedidosResumen(
     pendientesRevision: 0,
     pagosAprobados: 0,
@@ -18,8 +19,20 @@ class AdminPedidosController extends ChangeNotifier {
     pendientesBodega: 0,
     despachados: 0,
   );
+
   List<AdminPedido> pedidos = [];
   AdminPedidoFull? pedidoSeleccionado;
+
+  void limpiarMensaje() {
+    lastMessage = null;
+    error = null;
+    notifyListeners();
+  }
+
+  void limpiarDetalle() {
+    pedidoSeleccionado = null;
+    notifyListeners();
+  }
 
   Future<void> cargar({
     String? estadoPago,
@@ -27,6 +40,8 @@ class AdminPedidosController extends ChangeNotifier {
     String? buscar,
     String? banco,
     String? moneda,
+    String? fechaDesde,
+    String? fechaHasta,
   }) async {
     loading = true;
     error = null;
@@ -39,26 +54,99 @@ class AdminPedidosController extends ChangeNotifier {
         buscar: buscar,
         banco: banco,
         moneda: moneda,
+        fechaDesde: fechaDesde,
+        fechaHasta: fechaHasta,
       );
+
       resumen = response.resumen;
       pedidos = response.pedidos;
     } catch (e) {
-      error = e.toString();
+      error = _parseError(e);
     } finally {
       loading = false;
       notifyListeners();
     }
   }
 
+  Future<void> cargarPendientesContabilidad({
+    String? buscar,
+    String? banco,
+    String? moneda,
+    String? fechaDesde,
+    String? fechaHasta,
+  }) {
+    return cargar(
+      estadoPago: 'pendiente_revision',
+      buscar: buscar,
+      banco: banco,
+      moneda: moneda,
+      fechaDesde: fechaDesde,
+      fechaHasta: fechaHasta,
+    );
+  }
+
+  Future<void> cargarRechazadosContabilidad({
+    String? buscar,
+    String? banco,
+    String? moneda,
+    String? fechaDesde,
+    String? fechaHasta,
+  }) {
+    return cargar(
+      estadoPago: 'rechazado',
+      buscar: buscar,
+      banco: banco,
+      moneda: moneda,
+      fechaDesde: fechaDesde,
+      fechaHasta: fechaHasta,
+    );
+  }
+
+  Future<void> cargarPendientesDespacho({
+    String? buscar,
+    String? banco,
+    String? moneda,
+    String? fechaDesde,
+    String? fechaHasta,
+  }) {
+    return cargar(
+      estadoPago: 'aprobado',
+      estadoPedidoId: 3,
+      buscar: buscar,
+      banco: banco,
+      moneda: moneda,
+      fechaDesde: fechaDesde,
+      fechaHasta: fechaHasta,
+    );
+  }
+
+  Future<void> cargarDespachados({
+    String? buscar,
+    String? banco,
+    String? moneda,
+    String? fechaDesde,
+    String? fechaHasta,
+  }) {
+    return cargar(
+      estadoPedidoId: 4,
+      buscar: buscar,
+      banco: banco,
+      moneda: moneda,
+      fechaDesde: fechaDesde,
+      fechaHasta: fechaHasta,
+    );
+  }
+
   Future<void> cargarDetalle(int pedidoId) async {
     loading = true;
     error = null;
+    pedidoSeleccionado = null;
     notifyListeners();
 
     try {
       pedidoSeleccionado = await service.verPedido(pedidoId);
     } catch (e) {
-      error = e.toString();
+      error = _parseError(e);
     } finally {
       loading = false;
       notifyListeners();
@@ -66,17 +154,80 @@ class AdminPedidosController extends ChangeNotifier {
   }
 
   Future<void> aprobar(int pedidoId) async {
-    lastMessage = await service.aprobarTransferencia(pedidoId);
-    await cargar(estadoPago: 'pendiente_revision');
+    loading = true;
+    error = null;
+    lastMessage = null;
+    notifyListeners();
+
+    try {
+      lastMessage = await service.aprobarTransferencia(pedidoId);
+
+      // Después de aprobar, el pedido sale de contabilidad
+      // y pasa a la cola de despacho.
+      await cargarPendientesContabilidad();
+    } catch (e) {
+      error = _parseError(e);
+      loading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> rechazar(int pedidoId, {String? motivo}) async {
-    lastMessage = await service.rechazarTransferencia(pedidoId, motivo: motivo);
-    await cargar(estadoPago: 'pendiente_revision');
+    loading = true;
+    error = null;
+    lastMessage = null;
+    notifyListeners();
+
+    try {
+      lastMessage = await service.rechazarTransferencia(
+        pedidoId,
+        motivo: motivo,
+      );
+
+      // Después de rechazar, sale de pendientes y queda esperando
+      // corrección del cliente.
+      await cargarPendientesContabilidad();
+    } catch (e) {
+      error = _parseError(e);
+      loading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> despachar(int pedidoId) async {
-    lastMessage = await service.despacharPedido(pedidoId);
-    await cargar(estadoPedidoId: 3);
+    loading = true;
+    error = null;
+    lastMessage = null;
+    notifyListeners();
+
+    try {
+      lastMessage = await service.despacharPedido(pedidoId);
+
+      // Después de despachar, el pedido ya no debe aparecer
+      // en la cola de despacho.
+      await cargarPendientesDespacho();
+    } catch (e) {
+      error = _parseError(e);
+      loading = false;
+      notifyListeners();
+    }
+  }
+
+  bool puedeDespacharse(AdminPedido pedido) {
+    return pedido.estadoPago == 'aprobado' && pedido.estadoPedidoId == 3;
+  }
+
+  bool requiereCorreccionReferencia(AdminPedido pedido) {
+    return pedido.estadoPago == 'rechazado';
+  }
+
+  String _parseError(Object e) {
+    final text = e.toString();
+
+    if (text.startsWith('Exception: ')) {
+      return text.replaceFirst('Exception: ', '');
+    }
+
+    return text;
   }
 }

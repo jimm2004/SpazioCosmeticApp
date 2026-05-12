@@ -4,7 +4,8 @@
     <application
         android:label="store_mood_app"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true"> <!-- ✅ Línea agregada aquí -->
         
         <activity
             android:name=".MainActivity"

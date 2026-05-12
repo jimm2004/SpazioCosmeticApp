@@ -21,10 +21,6 @@ class MoodApiException implements Exception {
   String toString() => 'MoodApiException($statusCode): $message';
 }
 
-/// Cliente HTTP común para Flutter.
-///
-/// No reemplaza tu ApiService actual a la fuerza; sirve como capa puente.
-/// Puedes inyectarle el token que ya guarda tu AuthService/AuthController.
 class MoodApiClient {
   final String baseUrl;
   final TokenProvider? tokenProvider;
@@ -41,7 +37,9 @@ class MoodApiClient {
 
   static String _normalizeBaseUrl(String value) {
     final clean = value.trim();
-    if (clean.endsWith('/')) return clean.substring(0, clean.length - 1);
+    if (clean.endsWith('/')) {
+      return clean.substring(0, clean.length - 1);
+    }
     return clean;
   }
 
@@ -56,59 +54,95 @@ class MoodApiClient {
     };
   }
 
-  Uri _uri(String path, [Map<String, dynamic>? query]) {
+  Uri _uri(String path, {Map<String, dynamic>? query}) {
     final cleanPath = path.startsWith('/') ? path : '/$path';
     final uri = Uri.parse('$baseUrl$cleanPath');
 
-    if (query == null || query.isEmpty) return uri;
+    if (query == null || query.isEmpty) {
+      return uri;
+    }
 
     final cleanQuery = <String, String>{};
+
     query.forEach((key, value) {
       if (value == null) return;
+
       final text = value.toString().trim();
       if (text.isEmpty) return;
+
       cleanQuery[key] = text;
     });
 
-    return uri.replace(queryParameters: cleanQuery.isEmpty ? null : cleanQuery);
+    return uri.replace(
+      queryParameters: cleanQuery.isEmpty ? null : cleanQuery,
+    );
   }
 
-  Future<dynamic> get(String path, {Map<String, dynamic>? query}) async {
+  Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? query,
+  }) async {
     final response = await _client.get(
-      _uri(path, query),
+      _uri(path, query: query),
       headers: await _headers(),
     );
+
     return _decode(response);
   }
 
-  Future<dynamic> post(String path, {Map<String, dynamic>? body}) async {
+  Future<dynamic> post(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? query,
+  }) async {
     final response = await _client.post(
-      _uri(path),
+      _uri(path, query: query),
       headers: await _headers(),
       body: jsonEncode(body ?? <String, dynamic>{}),
     );
+
     return _decode(response);
   }
 
-  Future<dynamic> put(String path, {Map<String, dynamic>? body}) async {
+  Future<dynamic> put(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? query,
+  }) async {
     final response = await _client.put(
-      _uri(path),
+      _uri(path, query: query),
       headers: await _headers(),
       body: jsonEncode(body ?? <String, dynamic>{}),
     );
+
     return _decode(response);
   }
 
-  Future<dynamic> delete(String path) async {
-    final response = await _client.delete(
-      _uri(path),
-      headers: await _headers(),
+  Future<dynamic> delete(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? query,
+  }) async {
+    final request = http.Request(
+      'DELETE',
+      _uri(path, query: query),
     );
+
+    request.headers.addAll(await _headers());
+
+    if (body != null) {
+      request.body = jsonEncode(body);
+    }
+
+    final streamed = await _client.send(request);
+    final response = await http.Response.fromStream(streamed);
+
     return _decode(response);
   }
 
   dynamic _decode(http.Response response) {
     dynamic payload;
+
     try {
       payload = response.body.isEmpty ? null : jsonDecode(response.body);
     } catch (_) {
@@ -134,5 +168,9 @@ class MoodApiClient {
       message: message,
       errors: errors,
     );
+  }
+
+  void close() {
+    _client.close();
   }
 }
