@@ -28,19 +28,17 @@ class AdminPedidosService {
       },
     );
 
-    return AdminPedidosResponse.fromJson(Map<String, dynamic>.from(json));
+    return AdminPedidosResponse.fromJson(
+      Map<String, dynamic>.from(json),
+    );
   }
 
   Future<AdminPedidoFull> verPedido(int pedidoId) async {
     final json = await api.get('/admin/pedidos/$pedidoId');
-    return AdminPedidoFull.fromJson(Map<String, dynamic>.from(json));
-  }
 
-  /// Devuelve el JSON crudo del endpoint de detalle.
-  /// Se usa para armar la vista previa y PDF de despacho sin depender de nombres internos del modelo.
-  Future<Map<String, dynamic>> verPedidoParaDocumento(int pedidoId) async {
-    final json = await api.get('/admin/pedidos/$pedidoId');
-    return Map<String, dynamic>.from(json);
+    return AdminPedidoFull.fromJson(
+      Map<String, dynamic>.from(json),
+    );
   }
 
   Future<dynamic> historialPedido(int pedidoId) async {
@@ -48,11 +46,20 @@ class AdminPedidosService {
   }
 
   Future<String> aprobarTransferencia(int pedidoId) async {
-    final json = await api.post('/admin/pedidos/$pedidoId/aprobar-transferencia');
-    return _message(json, 'Transferencia aprobada correctamente. Pedido enviado a despacho.');
+    final json = await api.post(
+      '/admin/pedidos/$pedidoId/aprobar-transferencia',
+    );
+
+    return _message(
+      json,
+      'Transferencia aprobada correctamente. Pedido enviado a despacho.',
+    );
   }
 
-  Future<String> rechazarTransferencia(int pedidoId, {String? motivo}) async {
+  Future<String> rechazarTransferencia(
+    int pedidoId, {
+    String? motivo,
+  }) async {
     final json = await api.post(
       '/admin/pedidos/$pedidoId/rechazar-transferencia',
       body: {
@@ -62,12 +69,21 @@ class AdminPedidosService {
       },
     );
 
-    return _message(json, 'Transferencia rechazada. Se notificó al cliente para corregir la referencia.');
+    return _message(
+      json,
+      'Transferencia rechazada. Se notificó al cliente para corregir la referencia.',
+    );
   }
 
   Future<String> despacharPedido(int pedidoId) async {
-    final json = await api.post('/admin/pedidos/$pedidoId/despachar');
-    return _message(json, 'Pedido despachado correctamente. Se notificó al cliente por correo.');
+    final json = await api.post(
+      '/admin/pedidos/$pedidoId/despachar',
+    );
+
+    return _message(
+      json,
+      'Pedido despachado correctamente. Se notificó al cliente por correo.',
+    );
   }
 
   Future<AdminPedidosResponse> listarPendientesContabilidad({
@@ -143,6 +159,7 @@ class AdminPedidosService {
     if (json is Map && json['message'] != null) {
       return json['message'].toString();
     }
+
     return fallback;
   }
 }

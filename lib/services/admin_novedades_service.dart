@@ -1,5 +1,4 @@
-import 'package:flutter/foundation.dart';
-import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 import '../models/novedad_model.dart';
 import '../models/novedad_producto_imagen_model.dart';
@@ -7,11 +6,6 @@ import 'api_service.dart';
 
 class AdminNovedadesService {
   final ApiService _api = ApiService();
-
-  static const Duration _productosCacheDuration = Duration(seconds: 20);
-
-  List<Map<String, dynamic>>? _productosCache;
-  DateTime? _productosCacheAt;
 
   Future<List<NovedadModel>> listarNovedadesAdmin() async {
     final response = await _api.get('/api/admin/novedades');
@@ -22,30 +16,23 @@ class AdminNovedadesService {
   }
 
   Future<NovedadModel> detalleNovedad(int idNovedad) async {
-    if (idNovedad <= 0) {
-      throw Exception('ID de novedad inválido.');
-    }
-
     final response = await _api.get('/api/admin/novedades/$idNovedad');
 
     return NovedadModel.fromJson(_parseData(response));
   }
 
   Future<List<ProductoNovedadBusquedaModel>> buscarProductosParaNovedad(
-    String nombre, {
-    bool forceRefresh = false,
-  }) async {
+    String nombre,
+  ) async {
     final query = nombre.trim().toLowerCase();
 
     if (query.length < 2) {
       throw Exception('Ingresá al menos 2 letras del nombre del producto.');
     }
 
-    final productosRaw = await _obtenerProductosCacheados(
-      forceRefresh: forceRefresh,
-    );
+    final response = await _api.get('/api/admin/productos');
 
-    final productos = productosRaw
+    final productos = _parseList(response)
         .map((item) => ProductoNovedadBusquedaModel.fromJson(item))
         .where((producto) {
           final nombreProducto = producto.nombre.toLowerCase();
@@ -58,9 +45,7 @@ class AdminNovedadesService {
     productos.sort((a, b) => a.nombre.compareTo(b.nombre));
 
     if (productos.isEmpty) {
-      throw Exception(
-        'No encontré productos con ese nombre o no tienen imágenes.',
-      );
+      throw Exception('No encontré productos con ese nombre o no tienen imágenes.');
     }
 
     return productos;
@@ -69,20 +54,12 @@ class AdminNovedadesService {
   Future<NovedadModel> crearNovedad({
     required String titulo,
     required String descripcion,
-    XFile? foto,
+    File? foto,
     int? productoImagenId,
     String? enlaceUrl,
     required bool activo,
     required int orden,
   }) async {
-    _validarPayload(
-      titulo: titulo,
-      descripcion: descripcion,
-      orden: orden,
-      productoImagenId: productoImagenId,
-      enlaceUrl: enlaceUrl,
-    );
-
     final response = foto != null
         ? await _api.multipartPost(
             '/api/admin/novedades',
@@ -116,24 +93,12 @@ class AdminNovedadesService {
     required int idNovedad,
     required String titulo,
     required String descripcion,
-    XFile? foto,
+    File? foto,
     int? productoImagenId,
     String? enlaceUrl,
     required bool activo,
     required int orden,
   }) async {
-    if (idNovedad <= 0) {
-      throw Exception('ID de novedad inválido.');
-    }
-
-    _validarPayload(
-      titulo: titulo,
-      descripcion: descripcion,
-      orden: orden,
-      productoImagenId: productoImagenId,
-      enlaceUrl: enlaceUrl,
-    );
-
     final response = foto != null
         ? await _api.multipartPost(
             '/api/admin/novedades/$idNovedad',
@@ -167,10 +132,6 @@ class AdminNovedadesService {
     required int idNovedad,
     required bool activo,
   }) async {
-    if (idNovedad <= 0) {
-      throw Exception('ID de novedad inválido.');
-    }
-
     final response = await _api.post(
       '/api/admin/novedades/$idNovedad/estado',
       body: {
@@ -182,77 +143,7 @@ class AdminNovedadesService {
   }
 
   Future<void> eliminarNovedad(int idNovedad) async {
-    if (idNovedad <= 0) {
-      throw Exception('ID de novedad inválido.');
-    }
-
     await _api.delete('/api/admin/novedades/$idNovedad');
-  }
-
-  void limpiarCacheProductos() {
-    _productosCache = null;
-    _productosCacheAt = null;
-  }
-
-  Future<List<Map<String, dynamic>>> _obtenerProductosCacheados({
-    bool forceRefresh = false,
-  }) async {
-    final now = DateTime.now();
-    final cacheVigente = _productosCache != null &&
-        _productosCacheAt != null &&
-        now.difference(_productosCacheAt!) < _productosCacheDuration;
-
-    if (!forceRefresh && cacheVigente) {
-      return _productosCache!;
-    }
-
-    final response = await _api.get('/api/admin/productos');
-    final productos = _parseList(response);
-
-    _productosCache = productos;
-    _productosCacheAt = now;
-
-    debugPrint(
-      'AdminNovedadesService: productos cargados para novedades (${productos.length}).',
-    );
-
-    return productos;
-  }
-
-  void _validarPayload({
-    required String titulo,
-    required String descripcion,
-    required int orden,
-    int? productoImagenId,
-    String? enlaceUrl,
-  }) {
-    if (titulo.trim().isEmpty) {
-      throw Exception('El título de la novedad es obligatorio.');
-    }
-
-    if (descripcion.trim().isEmpty) {
-      throw Exception('La descripción de la novedad es obligatoria.');
-    }
-
-    if (orden < 0) {
-      throw Exception('El orden no puede ser negativo.');
-    }
-
-    if (productoImagenId != null && productoImagenId <= 0) {
-      throw Exception('La imagen de producto seleccionada no es válida.');
-    }
-
-    final cleanUrl = enlaceUrl?.trim() ?? '';
-    final tieneUrl = cleanUrl.isNotEmpty;
-
-    if (tieneUrl) {
-      final uri = Uri.tryParse(cleanUrl);
-      final isHttp = uri != null && (uri.isScheme('http') || uri.isScheme('https'));
-
-      if (!isHttp) {
-        throw Exception('El enlace debe iniciar con http:// o https://.');
-      }
-    }
   }
 
   Map<String, dynamic> _toBody({
@@ -263,23 +154,14 @@ class AdminNovedadesService {
     required bool activo,
     required int orden,
   }) {
-    final body = <String, dynamic>{
-      'titulo': titulo.trim(),
-      'descripcion': descripcion.trim(),
+    return {
+      'titulo': titulo,
+      'descripcion': descripcion,
+      'producto_imagen_id': productoImagenId,
+      'enlace_url': enlaceUrl,
       'activo': activo ? 1 : 0,
       'orden': orden,
     };
-
-    if (productoImagenId != null) {
-      body['producto_imagen_id'] = productoImagenId;
-    }
-
-    final cleanUrl = enlaceUrl?.trim() ?? '';
-    if (cleanUrl.isNotEmpty) {
-      body['enlace_url'] = cleanUrl;
-    }
-
-    return body;
   }
 
   Map<String, String> _toMultipartFields({
@@ -291,8 +173,8 @@ class AdminNovedadesService {
     required int orden,
   }) {
     final fields = <String, String>{
-      'titulo': titulo.trim(),
-      'descripcion': descripcion.trim(),
+      'titulo': titulo,
+      'descripcion': descripcion,
       'activo': activo ? '1' : '0',
       'orden': orden.toString(),
     };
@@ -301,9 +183,8 @@ class AdminNovedadesService {
       fields['producto_imagen_id'] = productoImagenId.toString();
     }
 
-    final cleanUrl = enlaceUrl?.trim() ?? '';
-    if (cleanUrl.isNotEmpty) {
-      fields['enlace_url'] = cleanUrl;
+    if (enlaceUrl != null && enlaceUrl.trim().isNotEmpty) {
+      fields['enlace_url'] = enlaceUrl.trim();
     }
 
     return fields;

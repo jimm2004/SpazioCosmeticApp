@@ -25,10 +25,9 @@ class CatalogoService {
    * CATÁLOGO
    * -------------------------------------------------------------------------- */
 
-  Future<List<ProductoCatalogo>> obtenerProductos({String buscar = '', int limite = 200, int? categoriaId}) async {
+  Future<List<ProductoCatalogo>> obtenerProductos({String buscar = '', int limite = 100}) async {
     final query = <String, dynamic>{'limite': limite};
     if (buscar.trim().isNotEmpty) query['buscar'] = buscar.trim();
-    if (categoriaId != null && categoriaId > 0) query['id_categoria'] = categoriaId;
     final response = await _api.get(_withQuery('/api/catalogo/productos', query));
     return _parseList(response).map(ProductoCatalogo.fromJson).toList();
   }
@@ -38,12 +37,6 @@ class CatalogoService {
     if (text.isEmpty) return obtenerProductos();
     final response = await _api.get('/api/catalogo/buscar/${Uri.encodeComponent(text)}');
     return _parseList(response).map(ProductoCatalogo.fromJson).toList();
-  }
-
-
-  Future<List<Map<String, dynamic>>> obtenerCategoriasCatalogo() async {
-    final response = await _api.get('/api/catalogo/categorias');
-    return _parseList(response);
   }
 
   Future<List<NovedadPublicaModel>> obtenerNovedades() async {

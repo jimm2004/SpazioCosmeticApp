@@ -6,40 +6,45 @@ import '../../models/catalogo/ubicacion_model.dart';
 import '../../services/catalogo_service.dart';
 
 class PerfilController extends ChangeNotifier {
-  final CatalogoService _service;
+  final CatalogoService _service = CatalogoService();
 
-  PerfilController({CatalogoService? service}) : _service = service ?? CatalogoService();
+  PerfilUsuarioModel? usuario;
+  DatosClienteModel? datosCliente;
+  List<ZonaModel> zonas = [];
+  List<DepartamentoModel> departamentos = [];
+  List<MunicipioModel> municipios = [];
 
   bool loading = false;
   bool saving = false;
   String? error;
-
-  PerfilUsuarioModel? usuario;
-  DatosClienteModel? datosCliente;
-  List<ZonaModel> zonas = <ZonaModel>[];
-  List<DepartamentoModel> departamentos = <DepartamentoModel>[];
-  List<MunicipioModel> municipios = <MunicipioModel>[];
 
   Future<void> cargar() async {
     loading = true;
     error = null;
     notifyListeners();
     try {
-      final results = await Future.wait<dynamic>([
+      final results = await Future.wait([
         _service.obtenerMiPerfil(),
         _service.obtenerDatosCliente(),
         _service.obtenerZonas(),
-        _service.obtenerDepartamentos(),
       ]);
       usuario = results[0] as PerfilUsuarioModel;
       datosCliente = results[1] as DatosClienteModel?;
-      zonas = List<ZonaModel>.from(results[2] as List);
-      departamentos = List<DepartamentoModel>.from(results[3] as List);
-      if (datosCliente?.departamentoId != null) {
-        municipios = await _service.obtenerMunicipios(datosCliente!.departamentoId!);
+      zonas = results[2] as List<ZonaModel>;
+
+      final zonaId = datosCliente?.zonaId;
+      if (zonaId != null) {
+        departamentos = await _service.obtenerDepartamentosPorZona(zonaId);
+      } else {
+        departamentos = await _service.obtenerDepartamentos();
+      }
+
+      final departamentoId = datosCliente?.departamentoId;
+      if (departamentoId != null) {
+        municipios = await _service.obtenerMunicipios(departamentoId);
       }
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
     } finally {
       loading = false;
       notifyListeners();
@@ -47,30 +52,39 @@ class PerfilController extends ChangeNotifier {
   }
 
   Future<void> seleccionarZona(int? zonaId) async {
-    departamentos = <DepartamentoModel>[];
-    municipios = <MunicipioModel>[];
-    error = null;
+    departamentos = [];
+    municipios = [];
+    datosCliente = (datosCliente ?? DatosClienteModel.empty(nombres: usuario?.name ?? '')).copyWith(
+      zonaId: zonaId,
+      limpiarDepartamento: true,
+      limpiarMunicipio: true,
+    );
     notifyListeners();
-    try {
-      departamentos = zonaId == null ? await _service.obtenerDepartamentos() : await _service.obtenerDepartamentosPorZona(zonaId);
-    } catch (e) {
-      error = _friendlyError(e);
-    } finally {
-      notifyListeners();
+    if (zonaId != null) {
+      try {
+        departamentos = await _service.obtenerDepartamentosPorZona(zonaId);
+      } catch (e) {
+        error = _cleanError(e);
+      }
     }
+    notifyListeners();
   }
 
   Future<void> seleccionarDepartamento(int? departamentoId) async {
-    municipios = <MunicipioModel>[];
-    error = null;
+    municipios = [];
+    datosCliente = (datosCliente ?? DatosClienteModel.empty(nombres: usuario?.name ?? '')).copyWith(
+      departamentoId: departamentoId,
+      limpiarMunicipio: true,
+    );
     notifyListeners();
-    try {
-      if (departamentoId != null) municipios = await _service.obtenerMunicipios(departamentoId);
-    } catch (e) {
-      error = _friendlyError(e);
-    } finally {
-      notifyListeners();
+    if (departamentoId != null) {
+      try {
+        municipios = await _service.obtenerMunicipios(departamentoId);
+      } catch (e) {
+        error = _cleanError(e);
+      }
     }
+    notifyListeners();
   }
 
   Future<bool> guardar(DatosClienteModel datos) async {
@@ -78,11 +92,12 @@ class PerfilController extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      datosCliente = datosCliente == null ? await _service.guardarDatosCliente(datos) : await _service.actualizarDatosCliente(datos);
-      if (datosCliente?.departamentoId != null) municipios = await _service.obtenerMunicipios(datosCliente!.departamentoId!);
+      datosCliente = datosCliente == null
+          ? await _service.guardarDatosCliente(datos)
+          : await _service.actualizarDatosCliente(datos);
       return true;
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
       return false;
     } finally {
       saving = false;
@@ -90,8 +105,5 @@ class PerfilController extends ChangeNotifier {
     }
   }
 
-  String _friendlyError(Object e) {
-    final text = e.toString().replaceFirst('Exception: ', '').trim();
-    return text.isEmpty ? 'No se pudo cargar el perfil.' : text;
-  }
+  String _cleanError(Object e) => e.toString().replaceFirst('Exception: ', '');
 }

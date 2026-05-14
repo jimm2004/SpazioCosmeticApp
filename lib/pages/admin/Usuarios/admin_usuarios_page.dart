@@ -15,10 +15,6 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
   final UsuariosController _controller = UsuariosController();
   final TextEditingController searchController = TextEditingController();
 
-  static const String roleAdministrador = 'administrador';
-  static const String roleDespacho = 'despacho';
-  static const String roleContabilidad = 'administracion_contable';
-
   List<Map<String, dynamic>> users = [];
   List<Map<String, dynamic>> filteredUsers = [];
 
@@ -32,15 +28,12 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
   }
 
   bool _esPersonalAdministrativo(Map<String, dynamic> user) {
-    final tipo = (user['tipo_usuario'] ?? '').toString().toLowerCase().trim();
-    final role = (user['role'] ?? '').toString().toLowerCase().trim();
+    final tipo = (user['tipo_usuario'] ?? '').toString().toLowerCase();
+    final role = (user['role'] ?? '').toString().toLowerCase();
 
     return tipo == 'personal_administrativo' ||
-        role == roleAdministrador ||
-        role == roleDespacho ||
-        role == roleContabilidad ||
-        role == 'contabilidad' ||
-        role == 'contable';
+        role == 'administrador' ||
+        role == 'despacho';
   }
 
   Future<void> loadUsers() async {
@@ -85,14 +78,8 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
       final name = (u['name'] ?? '').toString().toLowerCase();
       final email = (u['email'] ?? '').toString().toLowerCase();
       final role = (u['role'] ?? '').toString().toLowerCase();
-      final roleNormalizado = usuarioRole(u).toLowerCase();
-      final roleVisible = roleLabel(roleNormalizado).toLowerCase();
 
-      return name.contains(q) ||
-          email.contains(q) ||
-          role.contains(q) ||
-          roleNormalizado.contains(q) ||
-          roleVisible.contains(q);
+      return name.contains(q) || email.contains(q) || role.contains(q);
     }).toList();
   }
 
@@ -263,4 +250,4 @@ class _AdminUsuariosPageState extends State<AdminUsuariosPage> {
       ),
     );
   }
-}
+} 

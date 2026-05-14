@@ -34,40 +34,22 @@ class ProductoCatalogo {
         'precio_final': json['precio_final'],
       });
     }
-
-    final categoriaMap = json['categoria'] is Map
-        ? Map<String, dynamic>.from(json['categoria'])
-        : <String, dynamic>{
-            if (json['id_categoria'] != null) 'id_categoria': json['id_categoria'],
-            if (json['nombre_categoria'] != null) 'nombre_categoria': json['nombre_categoria'],
-            if (json['categoria_nombre'] != null) 'nombre_categoria': json['categoria_nombre'],
-            if (json['linea'] != null) 'nombre_categoria': json['linea'],
-          };
-
     return ProductoCatalogo(
       idProducto: _toInt(json['id_producto'] ?? json['producto_master_id'] ?? json['id']),
       nombre: (json['nombre'] ?? 'Producto').toString(),
       descripcion: (json['descripcion'] ?? '').toString(),
       precioVenta: _toDouble(json['precio_venta']),
       precioFinal: _toDouble(json['precio_final'] ?? json['precio_venta']),
-      categoria: categoriaMap.isEmpty ? null : categoriaMap,
+      categoria: json['categoria'] is Map ? Map<String, dynamic>.from(json['categoria']) : null,
       imagenes: imgs,
       tieneStock: _toBool(json['tiene_stock'] ?? true),
     );
   }
 
-  int? get categoriaId {
-    final value = categoria?['id_categoria'] ?? categoria?['id'] ?? categoria?['categoria_id'];
-    return _toNullableInt(value);
-  }
-
   String get categoriaNombre {
-    final value = categoria?['nombre_categoria'] ?? categoria?['nombre'] ?? categoria?['linea'] ?? 'Sin línea';
-    final text = value.toString().trim();
-    return text.isEmpty || text.toLowerCase() == 'null' ? 'Sin línea' : text;
+    final value = categoria?['nombre_categoria'] ?? categoria?['nombre'] ?? 'General';
+    return value.toString();
   }
-
-  String get lineaNombre => categoriaNombre;
 
   String get imagenPrincipal {
     for (final img in imagenes) {

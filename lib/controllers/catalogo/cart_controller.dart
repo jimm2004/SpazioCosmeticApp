@@ -5,27 +5,29 @@ import '../../services/catalogo_service.dart';
 
 class CartController extends ChangeNotifier {
   static final CartController instance = CartController._internal();
-  final CatalogoService _service = CatalogoService();
-
   CartController._internal();
 
-  bool loading = false;
-  bool saving = false;
-  String? error;
-  CarritoModel? carrito;
+  final CatalogoService _service = CatalogoService();
 
-  List<CarritoItemModel> get items => carrito?.items ?? const <CarritoItemModel>[];
-  double get subtotal => carrito?.subtotal ?? 0;
-  int get totalItems => carrito?.totalItems ?? 0;
+  CarritoModel? cart;
+  bool loading = false;
+  String? error;
+
+  int get totalItems => cart?.totalItems ?? 0;
+  double get subtotal => cart?.subtotal ?? 0;
+  double get total => subtotal;
+  bool get isEmpty => items.isEmpty;
+  List<CarritoItemModel> get items => cart?.items ?? const [];
 
   Future<void> cargarCarrito() async {
     loading = true;
     error = null;
     notifyListeners();
     try {
-      carrito = await _service.verCarrito();
+      cart = await _service.verCarrito();
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
+      cart ??= const CarritoModel(items: [], subtotal: 0, totalItems: 0);
     } finally {
       loading = false;
       notifyListeners();
@@ -37,93 +39,75 @@ class CartController extends ChangeNotifier {
     int? productoImagenId,
     int cantidad = 1,
   }) async {
-    if (productoMasterId <= 0) {
-      error = 'Producto inválido.';
-      notifyListeners();
-      return false;
-    }
-    if (cantidad <= 0) {
-      error = 'La cantidad debe ser mayor que cero.';
-      notifyListeners();
-      return false;
-    }
-    saving = true;
+    loading = true;
     error = null;
     notifyListeners();
     try {
-      carrito = await _service.agregarAlCarrito(
+      cart = await _service.agregarAlCarrito(
         productoMasterId: productoMasterId,
         productoImagenId: productoImagenId,
         cantidad: cantidad,
       );
       return true;
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
       return false;
     } finally {
-      saving = false;
+      loading = false;
       notifyListeners();
     }
   }
 
   Future<bool> editarCantidad(int detalleId, int cantidad) async {
-    if (detalleId <= 0) {
-      error = 'Ítem inválido.';
-      notifyListeners();
-      return false;
-    }
     if (cantidad <= 0) return quitarItem(detalleId);
-    saving = true;
+    loading = true;
     error = null;
     notifyListeners();
     try {
-      carrito = await _service.editarItemCarrito(detalleId: detalleId, cantidad: cantidad);
+      cart = await _service.editarItemCarrito(detalleId: detalleId, cantidad: cantidad);
       return true;
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
       return false;
     } finally {
-      saving = false;
+      loading = false;
       notifyListeners();
     }
   }
 
   Future<bool> quitarItem(int detalleId) async {
-    saving = true;
+    loading = true;
     error = null;
     notifyListeners();
     try {
-      carrito = await _service.quitarItemCarrito(detalleId);
+      cart = await _service.quitarItemCarrito(detalleId);
       return true;
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
       return false;
     } finally {
-      saving = false;
+      loading = false;
       notifyListeners();
     }
   }
+
+  Future<bool> limpiar() => vaciarCarrito();
 
   Future<bool> vaciarCarrito() async {
-    saving = true;
+    loading = true;
     error = null;
     notifyListeners();
     try {
-      carrito = await _service.vaciarCarrito();
+      cart = await _service.vaciarCarrito();
       return true;
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
       return false;
     } finally {
-      saving = false;
+      loading = false;
       notifyListeners();
     }
   }
 
-  void limpiarLocal() {
-    carrito = const CarritoModel(items: <CarritoItemModel>[], subtotal: 0, totalItems: 0);
-    notifyListeners();
-  }
-
-  String _friendlyError(Object e) => e.toString().replaceFirst('Exception: ', '').trim();
+  String _cleanError(Object e) => e.toString().replaceFirst('Exception: ', '');
 }

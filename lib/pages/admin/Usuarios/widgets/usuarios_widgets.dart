@@ -1,32 +1,16 @@
 import 'package:flutter/material.dart';
 
-const String roleAdministrador = 'administrador';
-const String roleDespacho = 'despacho';
-const String roleContabilidad = 'administracion_contable';
-
-const List<String> rolesAdministrativosPermitidos = [
-  roleAdministrador,
-  roleDespacho,
-  roleContabilidad,
-];
-
 bool usuarioActivo(Map<String, dynamic> user) {
   return user['activo'] == true || user['activo'] == 1 || user['activo'] == '1';
 }
 
 String usuarioRole(Map<String, dynamic> user) {
-  final role = user['role']?.toString().toLowerCase().trim() ?? roleDespacho;
+  final role = user['role']?.toString().toLowerCase().trim() ?? 'despacho';
 
-  if (role == roleAdministrador) return roleAdministrador;
-  if (role == roleDespacho) return roleDespacho;
+  if (role == 'administrador') return 'administrador';
+  if (role == 'despacho') return 'despacho';
 
-  if (role == roleContabilidad ||
-      role == 'contabilidad' ||
-      role == 'contable') {
-    return roleContabilidad;
-  }
-
-  return roleDespacho;
+  return 'despacho';
 }
 
 String usuarioTipo(Map<String, dynamic> user) {
@@ -36,9 +20,8 @@ String usuarioTipo(Map<String, dynamic> user) {
 String roleLabel(String role) {
   final r = role.toLowerCase();
 
-  if (r == roleAdministrador) return 'Administrador';
-  if (r == roleDespacho) return 'Despacho';
-  if (r == roleContabilidad) return 'Contabilidad';
+  if (r == 'administrador') return 'Administrador';
+  if (r == 'despacho') return 'Despacho';
 
   return 'Administrativo';
 }
@@ -46,9 +29,8 @@ String roleLabel(String role) {
 Color roleColor(String role) {
   final r = role.toLowerCase();
 
-  if (r == roleAdministrador) return const Color(0xFFE91E63);
-  if (r == roleDespacho) return const Color(0xFFF5A623);
-  if (r == roleContabilidad) return const Color(0xFF009688);
+  if (r == 'administrador') return const Color(0xFFE91E63);
+  if (r == 'despacho') return const Color(0xFFF5A623);
 
   return const Color(0xFF5E35B1);
 }
@@ -56,16 +38,12 @@ Color roleColor(String role) {
 IconData roleIcon(String role) {
   final r = role.toLowerCase();
 
-  if (r == roleAdministrador) {
+  if (r == 'administrador') {
     return Icons.admin_panel_settings_rounded;
   }
 
-  if (r == roleDespacho) {
+  if (r == 'despacho') {
     return Icons.local_shipping_rounded;
-  }
-
-  if (r == roleContabilidad) {
-    return Icons.account_balance_wallet_rounded;
   }
 
   return Icons.badge_rounded;
@@ -121,7 +99,7 @@ class UsuariosHeaderStats extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Solo se muestran usuarios administrativos: administrador, despacho y contabilidad.',
+                  'Solo se muestran usuarios administrativos: administrador y despacho.',
                   style: TextStyle(
                     color: Colors.white.withAlpha(215),
                     fontSize: 13,

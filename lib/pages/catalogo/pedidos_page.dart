@@ -62,7 +62,6 @@ class _PedidosPageState extends State<PedidosPage> {
               onRefresh: controller.cargarPedidos,
               child: controller.pedidos.isEmpty
                   ? ListView(
-                      cacheExtent: 160,
                       padding: const EdgeInsets.all(28),
                       children: const [
                         SizedBox(height: 120),
@@ -74,7 +73,6 @@ class _PedidosPageState extends State<PedidosPage> {
                       ],
                     )
                   : ListView.separated(
-                      cacheExtent: 160,
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                       itemCount: controller.pedidos.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 12),

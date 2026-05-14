@@ -1,4 +1,4 @@
-import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 import 'api_service.dart';
 
@@ -12,21 +12,27 @@ class AdminProductosService {
 
   Future<Map<String, dynamic>> obtenerDetalleProducto(int idProducto) async {
     final data = await _api.get('/api/admin/productos/$idProducto');
+
     return Map<String, dynamic>.from(data['data'] ?? {});
   }
 
   Future<Map<String, dynamic>> subirImagenProducto({
     required int idProducto,
-    required XFile imagen,
+    required File imagen,
     double? precioFinal,
     bool? esPrincipal,
   }) async {
-    final fields = _buildImageFields(
-      precioFinal: precioFinal,
-      esPrincipal: esPrincipal,
-    );
+    final fields = <String, String>{};
 
-    return await _api.multipartPostXFile(
+    if (precioFinal != null) {
+      fields['precio_final'] = precioFinal.toString();
+    }
+
+    if (esPrincipal != null) {
+      fields['es_principal'] = esPrincipal ? '1' : '0';
+    }
+
+    return await _api.multipartPost(
       '/api/admin/productos/$idProducto/imagen',
       fileField: 'imagen',
       file: imagen,
@@ -36,16 +42,21 @@ class AdminProductosService {
 
   Future<Map<String, dynamic>> cambiarImagenProducto({
     required int imagenId,
-    required XFile imagen,
+    required File imagen,
     double? precioFinal,
     bool? esPrincipal,
   }) async {
-    final fields = _buildImageFields(
-      precioFinal: precioFinal,
-      esPrincipal: esPrincipal,
-    );
+    final fields = <String, String>{};
 
-    return await _api.multipartPostXFile(
+    if (precioFinal != null) {
+      fields['precio_final'] = precioFinal.toString();
+    }
+
+    if (esPrincipal != null) {
+      fields['es_principal'] = esPrincipal ? '1' : '0';
+    }
+
+    return await _api.multipartPost(
       '/api/admin/productos/imagenes/$imagenId/cambiar-imagen',
       fileField: 'imagen',
       file: imagen,
@@ -80,22 +91,5 @@ class AdminProductosService {
         (activo
             ? 'Producto visible en el catálogo'
             : 'Producto oculto exitosamente');
-  }
-
-  Map<String, String> _buildImageFields({
-    double? precioFinal,
-    bool? esPrincipal,
-  }) {
-    final fields = <String, String>{};
-
-    if (precioFinal != null) {
-      fields['precio_final'] = precioFinal.toString();
-    }
-
-    if (esPrincipal != null) {
-      fields['es_principal'] = esPrincipal ? '1' : '0';
-    }
-
-    return fields;
   }
 }

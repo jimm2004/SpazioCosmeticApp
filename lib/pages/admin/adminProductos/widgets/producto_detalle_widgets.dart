@@ -1,9 +1,8 @@
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
 import '../../../../models/producto_admin_model.dart';
-import 'web_safe_network_image.dart';
 
 class ProductoAndroidHeader extends StatelessWidget {
   final ProductoAdminModel producto;
@@ -29,7 +28,7 @@ class ProductoAndroidHeader extends StatelessWidget {
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF5E35B1).withOpacity(0.22),
+            color: const Color(0xFF5E35B1).withValues(alpha: 0.22),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -41,7 +40,7 @@ class ProductoAndroidHeader extends StatelessWidget {
             height: 58,
             width: 58,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(18),
             ),
             child: const Icon(
@@ -70,7 +69,7 @@ class ProductoAndroidHeader extends StatelessWidget {
                 Text(
                   'Fotos cargadas: $total / 2',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withValues(alpha: 0.85),
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -81,7 +80,7 @@ class ProductoAndroidHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -101,20 +100,14 @@ class ProductoAndroidHeader extends StatelessWidget {
 class ProductoPhotoSlots extends StatelessWidget {
   final ProductoAdminModel producto;
   final int slotSeleccionado;
-  final Uint8List? imagenSlot1Bytes;
-  final Uint8List? imagenSlot2Bytes;
-  final String? imagenSlot1Nombre;
-  final String? imagenSlot2Nombre;
+  final File? imagenSeleccionada;
   final ValueChanged<int> onSelectSlot;
 
   const ProductoPhotoSlots({
     super.key,
     required this.producto,
     required this.slotSeleccionado,
-    required this.imagenSlot1Bytes,
-    required this.imagenSlot2Bytes,
-    required this.imagenSlot1Nombre,
-    required this.imagenSlot2Nombre,
+    required this.imagenSeleccionada,
     required this.onSelectSlot,
   });
 
@@ -122,31 +115,6 @@ class ProductoPhotoSlots extends StatelessWidget {
   Widget build(BuildContext context) {
     final foto1 = producto.imagenes.isNotEmpty ? producto.imagenes[0] : null;
     final foto2 = producto.imagenes.length > 1 ? producto.imagenes[1] : null;
-
-    final cards = [
-      ProductoPhotoSlotCard(
-        title: 'Foto 1',
-        subtitle: foto1 == null ? 'Ranura disponible' : 'Principal',
-        selected: slotSeleccionado == 1,
-        imagenSeleccionadaBytes: imagenSlot1Bytes,
-        imagenSeleccionadaNombre: imagenSlot1Nombre,
-        imagenUrl: foto1?.imagenUrl,
-        precioFinal: foto1?.precioFinal,
-        isPrincipal: foto1?.esPrincipal ?? true,
-        onTap: () => onSelectSlot(1),
-      ),
-      ProductoPhotoSlotCard(
-        title: 'Foto 2',
-        subtitle: foto2 == null ? 'Ranura disponible' : 'Secundaria',
-        selected: slotSeleccionado == 2,
-        imagenSeleccionadaBytes: imagenSlot2Bytes,
-        imagenSeleccionadaNombre: imagenSlot2Nombre,
-        imagenUrl: foto2?.imagenUrl,
-        precioFinal: foto2?.precioFinal,
-        isPrincipal: foto2?.esPrincipal ?? false,
-        onTap: () => onSelectSlot(2),
-      ),
-    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,26 +128,36 @@ class ProductoPhotoSlots extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth < 650) {
-              return Column(
-                children: [
-                  cards[0],
-                  const SizedBox(height: 12),
-                  cards[1],
-                ],
-              );
-            }
-
-            return Row(
-              children: [
-                Expanded(child: cards[0]),
-                const SizedBox(width: 12),
-                Expanded(child: cards[1]),
-              ],
-            );
-          },
+        Row(
+          children: [
+            Expanded(
+              child: ProductoPhotoSlotCard(
+                title: 'Foto 1',
+                subtitle: foto1 == null ? 'Ranura disponible' : 'Principal',
+                selected: slotSeleccionado == 1,
+                imagenSeleccionada:
+                    slotSeleccionado == 1 ? imagenSeleccionada : null,
+                imagenUrl: foto1?.imagenUrl,
+                precioFinal: foto1?.precioFinal,
+                isPrincipal: foto1?.esPrincipal ?? true,
+                onTap: () => onSelectSlot(1),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ProductoPhotoSlotCard(
+                title: 'Foto 2',
+                subtitle: foto2 == null ? 'Ranura disponible' : 'Secundaria',
+                selected: slotSeleccionado == 2,
+                imagenSeleccionada:
+                    slotSeleccionado == 2 ? imagenSeleccionada : null,
+                imagenUrl: foto2?.imagenUrl,
+                precioFinal: foto2?.precioFinal,
+                isPrincipal: foto2?.esPrincipal ?? false,
+                onTap: () => onSelectSlot(2),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -190,8 +168,7 @@ class ProductoPhotoSlotCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool selected;
-  final Uint8List? imagenSeleccionadaBytes;
-  final String? imagenSeleccionadaNombre;
+  final File? imagenSeleccionada;
   final String? imagenUrl;
   final double? precioFinal;
   final bool isPrincipal;
@@ -202,8 +179,7 @@ class ProductoPhotoSlotCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.selected,
-    required this.imagenSeleccionadaBytes,
-    required this.imagenSeleccionadaNombre,
+    required this.imagenSeleccionada,
     required this.imagenUrl,
     required this.precioFinal,
     required this.isPrincipal,
@@ -213,7 +189,7 @@ class ProductoPhotoSlotCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tieneImagenUrl = imagenUrl != null && imagenUrl!.trim().isNotEmpty;
-    final tieneNuevaImagen = imagenSeleccionadaBytes != null && imagenSeleccionadaBytes!.isNotEmpty;
+    final tieneNuevaImagen = imagenSeleccionada != null;
 
     return GestureDetector(
       onTap: onTap,
@@ -230,8 +206,8 @@ class ProductoPhotoSlotCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: selected
-                  ? const Color(0xFF5E35B1).withOpacity(0.16)
-                  : Colors.black.withOpacity(0.04),
+                  ? const Color(0xFF5E35B1).withValues(alpha: 0.16)
+                  : Colors.black.withValues(alpha: 0.04),
               blurRadius: selected ? 16 : 10,
               offset: const Offset(0, 5),
             ),
@@ -247,20 +223,22 @@ class ProductoPhotoSlotCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(18),
                     child: SizedBox.expand(
                       child: tieneNuevaImagen
-                          ? Image.memory(
-                              imagenSeleccionadaBytes!,
+                          ? Image.file(
+                              imagenSeleccionada!,
                               fit: BoxFit.cover,
-                              gaplessPlayback: true,
                             )
                           : tieneImagenUrl
-                              ? WebSafeNetworkImage(
-                                  url: imagenUrl!,
+                              ? Image.network(
+                                  imagenUrl!,
                                   fit: BoxFit.cover,
-                                  errorWidget: const ProductoSlotPlaceholder(),
+                                  errorBuilder: (_, __, ___) {
+                                    return const ProductoSlotPlaceholder();
+                                  },
                                 )
                               : const ProductoSlotPlaceholder(),
                     ),
                   ),
+
                   if (tieneNuevaImagen)
                     Positioned(
                       left: 8,
@@ -270,6 +248,7 @@ class ProductoPhotoSlotCard extends StatelessWidget {
                         color: Colors.orange.shade700,
                       ),
                     ),
+
                   if (isPrincipal)
                     Positioned(
                       right: 8,
@@ -277,16 +256,6 @@ class ProductoPhotoSlotCard extends StatelessWidget {
                       child: _SlotChip(
                         text: 'Principal',
                         color: const Color(0xFF5E35B1),
-                      ),
-                    ),
-                  if (selected)
-                    const Positioned(
-                      right: 8,
-                      bottom: 8,
-                      child: Icon(
-                        Icons.check_circle_rounded,
-                        color: Color(0xFF5E35B1),
-                        size: 24,
                       ),
                     ),
                 ],
@@ -304,19 +273,19 @@ class ProductoPhotoSlotCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (tieneNuevaImagen)
-                  const Icon(Icons.upload_file_rounded, color: Colors.orange, size: 20),
+                if (selected)
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    color: Color(0xFF5E35B1),
+                    size: 20,
+                  ),
               ],
             ),
             const SizedBox(height: 4),
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                tieneNuevaImagen
-                    ? (imagenSeleccionadaNombre ?? 'Imagen seleccionada')
-                    : subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                subtitle,
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 12,
@@ -328,9 +297,12 @@ class ProductoPhotoSlotCard extends StatelessWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(9),
                   ),
                   child: Text(
@@ -355,19 +327,29 @@ class _SlotChip extends StatelessWidget {
   final String text;
   final Color color;
 
-  const _SlotChip({required this.text, required this.color});
+  const _SlotChip({
+    required this.text,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 7,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.9),
+        color: color.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(9),
       ),
       child: Text(
         text,
-        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -381,7 +363,11 @@ class ProductoSlotPlaceholder extends StatelessWidget {
     return Container(
       color: Colors.grey.shade100,
       child: Center(
-        child: Icon(Icons.add_photo_alternate_rounded, size: 42, color: Colors.grey.shade400),
+        child: Icon(
+          Icons.add_photo_alternate_rounded,
+          size: 42,
+          color: Colors.grey.shade400,
+        ),
       ),
     );
   }
@@ -392,7 +378,7 @@ class PrecioFinalEditorCard extends StatelessWidget {
   final double precioVenta;
   final bool enabled;
   final bool ranuraOcupada;
-  final int imagenesNuevasCount;
+  final bool tieneImagenNueva;
 
   const PrecioFinalEditorCard({
     super.key,
@@ -400,18 +386,16 @@ class PrecioFinalEditorCard extends StatelessWidget {
     required this.precioVenta,
     required this.enabled,
     required this.ranuraOcupada,
-    required this.imagenesNuevasCount,
+    required this.tieneImagenNueva,
   });
 
   @override
   Widget build(BuildContext context) {
-    final helper = imagenesNuevasCount >= 2
-        ? 'Este precio final se aplicará a las 2 imágenes seleccionadas.'
-        : imagenesNuevasCount == 1
-            ? 'Este precio final se aplicará a la imagen seleccionada.'
-            : ranuraOcupada
-                ? 'Puedes editar solo el precio final de la ranura seleccionada.'
-                : 'Precio para la nueva imagen. Base: \$${precioVenta.toStringAsFixed(2)}';
+    final helper = ranuraOcupada
+        ? tieneImagenNueva
+            ? 'Se guardará nuevo precio y nueva imagen.'
+            : 'Puedes editar solo el precio final.'
+        : 'Precio para la nueva imagen. Base: \$${precioVenta.toStringAsFixed(2)}';
 
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
@@ -423,36 +407,54 @@ class PrecioFinalEditorCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 5)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
           ],
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(11),
-              decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), shape: BoxShape.circle),
-              child: Icon(Icons.attach_money_rounded, color: Colors.green.shade700),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.attach_money_rounded,
+                color: Colors.green.shade700,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: TextField(
                 controller: controller,
                 enabled: enabled,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Precio final',
                   helperText: helper,
                   prefixText: '\$ ',
                   filled: true,
                   fillColor: Colors.grey.shade50,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide(color: Colors.grey.shade200),
                   ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(16)),
-                    borderSide: BorderSide(color: Color(0xFF5E35B1), width: 2),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF5E35B1),
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -467,11 +469,16 @@ class PrecioFinalEditorCard extends StatelessWidget {
 class ProductoInfoSection extends StatelessWidget {
   final ProductoAdminModel producto;
 
-  const ProductoInfoSection({super.key, required this.producto});
+  const ProductoInfoSection({
+    super.key,
+    required this.producto,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final precioFinal = producto.precioFinal > 0 ? producto.precioFinal : producto.precioVenta;
+    final precioFinal = producto.precioFinal > 0
+        ? producto.precioFinal
+        : producto.precioVenta;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -483,19 +490,51 @@ class ProductoInfoSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Información', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF2C3E50))),
+          const Text(
+            'Información',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF2C3E50),
+            ),
+          ),
           const SizedBox(height: 14),
-          _InfoRow(icon: Icons.sell_rounded, label: 'Precio base', value: '\$${producto.precioVenta.toStringAsFixed(2)}'),
+          _InfoRow(
+            icon: Icons.sell_rounded,
+            label: 'Precio base',
+            value: '\$${producto.precioVenta.toStringAsFixed(2)}',
+          ),
           const SizedBox(height: 10),
-          _InfoRow(icon: Icons.local_offer_rounded, label: 'Precio final', value: '\$${precioFinal.toStringAsFixed(2)}'),
+          _InfoRow(
+            icon: Icons.local_offer_rounded,
+            label: 'Precio final',
+            value: '\$${precioFinal.toStringAsFixed(2)}',
+          ),
           const SizedBox(height: 10),
-          _InfoRow(icon: Icons.inventory_rounded, label: 'Stock', value: '${producto.cantidadStock}'),
+          _InfoRow(
+            icon: Icons.inventory_rounded,
+            label: 'Stock',
+            value: '${producto.cantidadStock}',
+          ),
           const SizedBox(height: 16),
-          const Text('Descripción', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+          const Text(
+            'Descripción',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
-            producto.descripcion.isEmpty ? 'Este producto no tiene descripción.' : producto.descripcion,
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade700, height: 1.45),
+            producto.descripcion.isEmpty
+                ? 'Este producto no tiene descripción.'
+                : producto.descripcion,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade700,
+              height: 1.45,
+            ),
           ),
         ],
       ),
@@ -508,7 +547,11 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _InfoRow({required this.icon, required this.label, required this.value});
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -517,9 +560,21 @@ class _InfoRow extends StatelessWidget {
         Icon(icon, color: const Color(0xFF5E35B1), size: 20),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(label, style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
-        Text(value, style: const TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.w800)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Color(0xFF2C3E50),
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ],
     );
   }
@@ -529,7 +584,11 @@ class ProductoVisibilityCard extends StatelessWidget {
   final bool esVisible;
   final ValueChanged<bool> onChanged;
 
-  const ProductoVisibilityCard({super.key, required this.esVisible, required this.onChanged});
+  const ProductoVisibilityCard({
+    super.key,
+    required this.esVisible,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -549,11 +608,15 @@ class ProductoVisibilityCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: esVisible ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                    color: esVisible
+                        ? Colors.green.withValues(alpha: 0.1)
+                        : Colors.orange.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    esVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                    esVisible
+                        ? Icons.visibility_rounded
+                        : Icons.visibility_off_rounded,
                     color: esVisible ? Colors.green : Colors.orange,
                   ),
                 ),
@@ -562,10 +625,21 @@ class ProductoVisibilityCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Visible en catálogo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Text(
+                        'Visible en catálogo',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       Text(
-                        esVisible ? 'Los clientes pueden verlo' : 'Oculto para clientes',
-                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                        esVisible
+                            ? 'Los clientes pueden verlo'
+                            : 'Oculto para clientes',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                     ],
                   ),
@@ -592,12 +666,10 @@ class ProductoImageActions extends StatelessWidget {
   final int totalImagenes;
   final int slotSeleccionado;
   final bool ranuraOcupada;
-  final int imagenesNuevasCount;
+  final bool tieneImagenSeleccionada;
   final VoidCallback onTomarFoto;
   final VoidCallback onElegirGaleria;
-  final VoidCallback onElegirDosImagenes;
   final VoidCallback onQuitarImagenSeleccionada;
-  final VoidCallback onQuitarTodasImagenes;
   final VoidCallback onGuardarCambios;
 
   const ProductoImageActions({
@@ -606,39 +678,35 @@ class ProductoImageActions extends StatelessWidget {
     required this.totalImagenes,
     required this.slotSeleccionado,
     required this.ranuraOcupada,
-    required this.imagenesNuevasCount,
+    required this.tieneImagenSeleccionada,
     required this.onTomarFoto,
     required this.onElegirGaleria,
-    required this.onElegirDosImagenes,
     required this.onQuitarImagenSeleccionada,
-    required this.onQuitarTodasImagenes,
     required this.onGuardarCambios,
   });
 
   @override
   Widget build(BuildContext context) {
-    final tieneImagenSeleccionada = imagenesNuevasCount > 0;
     final puedeCrearNueva = totalImagenes < 2;
-    final puedeSeleccionarFoto = !subiendo && (ranuraOcupada || puedeCrearNueva || totalImagenes >= 2);
+    final puedeSeleccionarFoto = !subiendo && (ranuraOcupada || puedeCrearNueva);
 
     String descripcion;
     String botonTexto;
     IconData botonIcono;
 
-    if (imagenesNuevasCount >= 2) {
-      descripcion = 'Tienes 2 imágenes listas. Se guardarán con el mismo precio final y respetando ranura 1 principal / ranura 2 secundaria.';
-      botonTexto = 'Subir 2 imágenes y precio final';
-      botonIcono = Icons.cloud_done_rounded;
-    } else if (ranuraOcupada && tieneImagenSeleccionada) {
-      descripcion = 'Ranura $slotSeleccionado ocupada. Se reemplazará la imagen anterior y se guardará el precio final.';
+    if (ranuraOcupada && tieneImagenSeleccionada) {
+      descripcion =
+          'Ranura $slotSeleccionado ocupada. Se reemplazará la imagen anterior y se guardará el precio final.';
       botonTexto = 'Cambiar imagen y guardar precio';
       botonIcono = Icons.swap_horiz_rounded;
     } else if (ranuraOcupada && !tieneImagenSeleccionada) {
-      descripcion = 'Ranura $slotSeleccionado ocupada. Puedes actualizar solo el precio final.';
+      descripcion =
+          'Ranura $slotSeleccionado ocupada. Puedes actualizar solo el precio final.';
       botonTexto = 'Actualizar precio final';
       botonIcono = Icons.price_change_rounded;
     } else {
-      descripcion = 'Ranura $slotSeleccionado disponible. Puedes cargar una imagen o seleccionar dos desde Galería.';
+      descripcion =
+          'Ranura $slotSeleccionado disponible. Selecciona una imagen para cargarla.';
       botonTexto = 'Guardar imagen ${totalImagenes + 1}/2';
       botonIcono = Icons.cloud_upload_rounded;
     }
@@ -653,13 +721,26 @@ class ProductoImageActions extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Gestión de fotografía', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF2C3E50))),
+          const Text(
+            'Gestión de fotografía',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF2C3E50),
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
             descripcion,
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.w600, height: 1.35),
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+            ),
           ),
           const SizedBox(height: 14),
+
           Row(
             children: [
               Expanded(
@@ -667,7 +748,14 @@ class ProductoImageActions extends StatelessWidget {
                   onPressed: puedeSeleccionarFoto ? onTomarFoto : null,
                   icon: const Icon(Icons.camera_alt_rounded),
                   label: const Text('Cámara'),
-                  style: _outlineButtonStyle(),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    foregroundColor: const Color(0xFF5E35B1),
+                    side: const BorderSide(color: Color(0xFF5E35B1)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -676,44 +764,36 @@ class ProductoImageActions extends StatelessWidget {
                   onPressed: puedeSeleccionarFoto ? onElegirGaleria : null,
                   icon: const Icon(Icons.photo_library_rounded),
                   label: const Text('Galería'),
-                  style: _outlineButtonStyle(),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    foregroundColor: const Color(0xFF5E35B1),
+                    side: const BorderSide(color: Color(0xFF5E35B1)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: subiendo ? null : onElegirDosImagenes,
-              icon: const Icon(Icons.collections_rounded),
-              label: const Text('Elegir 2 imágenes desde galería'),
-              style: _outlineButtonStyle(),
-            ),
-          ),
+
           if (tieneImagenSeleccionada) ...[
             const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.end,
-              children: [
-                TextButton.icon(
-                  onPressed: subiendo ? null : onQuitarImagenSeleccionada,
-                  icon: const Icon(Icons.close_rounded),
-                  label: Text('Quitar ranura $slotSeleccionado'),
-                  style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: subiendo ? null : onQuitarImagenSeleccionada,
+                icon: const Icon(Icons.close_rounded),
+                label: const Text('Quitar selección'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
                 ),
-                TextButton.icon(
-                  onPressed: subiendo ? null : onQuitarTodasImagenes,
-                  icon: const Icon(Icons.delete_sweep_rounded),
-                  label: const Text('Quitar todo'),
-                  style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-                ),
-              ],
+              ),
             ),
           ],
+
           const SizedBox(height: 16),
+
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -722,37 +802,34 @@ class ProductoImageActions extends StatelessWidget {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : Icon(botonIcono),
               label: Text(
                 subiendo ? 'Guardando cambios...' : botonTexto,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: imagenesNuevasCount >= 2
-                    ? const Color(0xFF5E35B1)
-                    : ranuraOcupada
-                        ? const Color(0xFF2C3E50)
-                        : const Color(0xFF5E35B1),
+                backgroundColor: ranuraOcupada
+                    ? const Color(0xFF2C3E50)
+                    : const Color(0xFF5E35B1),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  ButtonStyle _outlineButtonStyle() {
-    return OutlinedButton.styleFrom(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      foregroundColor: const Color(0xFF5E35B1),
-      side: const BorderSide(color: Color(0xFF5E35B1)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     );
   }
 }

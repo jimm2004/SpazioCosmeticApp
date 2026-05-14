@@ -3,99 +3,128 @@ import 'package:flutter/foundation.dart';
 import '../../models/catalogo/datos_cliente_model.dart';
 import '../../models/catalogo/metodo_pago_model.dart';
 import '../../models/catalogo/pedido_model.dart';
+import '../../models/catalogo/tarifa_envio_model.dart';
 import '../../models/catalogo/ubicacion_model.dart';
 import '../../services/catalogo_service.dart';
 import 'cart_controller.dart';
 
 class CheckoutController extends ChangeNotifier {
-  final CatalogoService _service;
+  final CatalogoService _service = CatalogoService();
 
-  CheckoutController({CatalogoService? service}) : _service = service ?? CatalogoService();
+  DatosClienteModel? datosCliente;
+  List<ZonaModel> zonas = [];
+  List<DepartamentoModel> departamentos = [];
+  List<MunicipioModel> municipios = [];
+  List<MetodoPagoModel> metodosPago = [];
+  List<TarifaEnvioModel> tarifasEnvio = [];
+
+  MetodoPagoModel? metodoSeleccionado;
+  double costoEnvio = 0;
+  String zonaEnvio = '';
+  double porcentajeEnvio = 0;
 
   bool loading = false;
   bool saving = false;
   String? error;
 
-  DatosClienteModel? datosCliente;
-  List<ZonaModel> zonas = <ZonaModel>[];
-  List<DepartamentoModel> departamentos = <DepartamentoModel>[];
-  List<MunicipioModel> municipios = <MunicipioModel>[];
-  List<MetodoPagoModel> metodosPago = <MetodoPagoModel>[];
-  MetodoPagoModel? metodoSeleccionado;
+  bool get requiereDatosCliente => datosCliente == null || !datosCliente!.completo;
+  double get total => CartController.instance.subtotal + costoEnvio;
 
-  double costoEnvio = 0;
-  double porcentajeEnvio = 0;
-  String zonaEnvio = '';
+  Future<void> cargarInicial() => inicializar();
 
-  double get subtotal => CartController.instance.subtotal;
-  double get total => subtotal + costoEnvio;
-  bool get requiereDatosCliente => !(datosCliente?.completo ?? false);
-
-  Future<void> inicializar() => cargar();
-
-  Future<void> cargar() async {
+  Future<void> inicializar() async {
     loading = true;
     error = null;
     notifyListeners();
+
     try {
-      await CartController.instance.cargarCarrito();
-      final results = await Future.wait<dynamic>([
+      final results = await Future.wait([
         _service.obtenerDatosCliente(),
         _service.obtenerZonas(),
-        _service.obtenerDepartamentos(),
         _service.obtenerMetodosPago(),
+        _service.obtenerTarifasEnvio(),
       ]);
+
       datosCliente = results[0] as DatosClienteModel?;
-      zonas = List<ZonaModel>.from(results[1] as List);
-      departamentos = List<DepartamentoModel>.from(results[2] as List);
-      metodosPago = List<MetodoPagoModel>.from(results[3] as List).where((m) => m.activo).toList();
-      metodosPago.sort((a, b) => a.orden.compareTo(b.orden));
-      metodoSeleccionado = metodosPago.isNotEmpty ? metodosPago.first : null;
-      if (datosCliente?.departamentoId != null) {
-        municipios = await _service.obtenerMunicipios(datosCliente!.departamentoId!);
+      zonas = results[1] as List<ZonaModel>;
+      metodosPago = results[2] as List<MetodoPagoModel>;
+      tarifasEnvio = results[3] as List<TarifaEnvioModel>;
+
+      if (metodosPago.isNotEmpty) metodoSeleccionado = metodosPago.first;
+
+      await _cargarUbicacionInicial();
+      final dept = _buscarDepartamento(datosCliente?.departamentoId);
+      if (datosCliente != null && datosCliente!.zonaId == null && dept?.zonaId != null) {
+        datosCliente = datosCliente!.copyWith(zonaId: dept!.zonaId);
       }
-      await _previewEnvio();
+      await calcularEnvio();
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
     } finally {
       loading = false;
       notifyListeners();
     }
   }
 
-  Future<void> seleccionarZona(int? zonaId) async {
-    error = null;
-    departamentos = <DepartamentoModel>[];
-    municipios = <MunicipioModel>[];
-    notifyListeners();
-    try {
-      if (zonaId == null) {
-        departamentos = await _service.obtenerDepartamentos();
-      } else {
-        departamentos = await _service.obtenerDepartamentosPorZona(zonaId);
-      }
-    } catch (e) {
-      error = _friendlyError(e);
-    } finally {
-      notifyListeners();
+  Future<void> _cargarUbicacionInicial() async {
+    final zonaId = datosCliente?.zonaId;
+    final departamentoId = datosCliente?.departamentoId;
+
+    if (zonaId != null) {
+      departamentos = await _service.obtenerDepartamentosPorZona(zonaId);
+    } else {
+      departamentos = await _service.obtenerDepartamentos();
     }
+
+    if (departamentoId != null) {
+      municipios = await _service.obtenerMunicipios(departamentoId);
+    } else {
+      municipios = [];
+    }
+  }
+
+  Future<void> seleccionarZona(int? zonaId) async {
+    departamentos = [];
+    municipios = [];
+    datosCliente = (datosCliente ?? DatosClienteModel.empty()).copyWith(
+      zonaId: zonaId,
+      limpiarDepartamento: true,
+      limpiarMunicipio: true,
+    );
+    notifyListeners();
+
+    if (zonaId != null) {
+      try {
+        departamentos = await _service.obtenerDepartamentosPorZona(zonaId);
+      } catch (e) {
+        error = _cleanError(e);
+      }
+    }
+    await calcularEnvioSilencioso();
+    notifyListeners();
   }
 
   Future<void> seleccionarDepartamento(int? departamentoId) async {
-    error = null;
-    municipios = <MunicipioModel>[];
+    municipios = [];
+    datosCliente = (datosCliente ?? DatosClienteModel.empty()).copyWith(
+      departamentoId: departamentoId,
+      limpiarMunicipio: true,
+    );
     notifyListeners();
-    try {
-      if (departamentoId != null) municipios = await _service.obtenerMunicipios(departamentoId);
-    } catch (e) {
-      error = _friendlyError(e);
-    } finally {
-      notifyListeners();
+
+    if (departamentoId != null) {
+      try {
+        municipios = await _service.obtenerMunicipios(departamentoId);
+      } catch (e) {
+        error = _cleanError(e);
+      }
     }
+    await calcularEnvioSilencioso();
+    notifyListeners();
   }
 
-  void seleccionarMetodo(MetodoPagoModel metodo) {
-    metodoSeleccionado = metodo;
+  Future<void> cargarMunicipios(int departamentoId) async {
+    municipios = await _service.obtenerMunicipios(departamentoId);
     notifyListeners();
   }
 
@@ -103,17 +132,21 @@ class CheckoutController extends ChangeNotifier {
     saving = true;
     error = null;
     notifyListeners();
+
     try {
+      final normalized = _normalizarDatos(datos);
       datosCliente = datosCliente == null
-          ? await _service.guardarDatosCliente(datos)
-          : await _service.actualizarDatosCliente(datos);
-      if (datosCliente?.departamentoId != null) {
-        municipios = await _service.obtenerMunicipios(datosCliente!.departamentoId!);
+          ? await _service.guardarDatosCliente(normalized)
+          : await _service.actualizarDatosCliente(normalized);
+      await _cargarUbicacionInicial();
+      final dept = _buscarDepartamento(datosCliente?.departamentoId);
+      if (datosCliente != null && datosCliente!.zonaId == null && dept?.zonaId != null) {
+        datosCliente = datosCliente!.copyWith(zonaId: dept!.zonaId);
       }
-      await _previewEnvio();
+      await calcularEnvio();
       return true;
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
       return false;
     } finally {
       saving = false;
@@ -121,39 +154,96 @@ class CheckoutController extends ChangeNotifier {
     }
   }
 
+  Future<bool> guardarDatosCliente(DatosClienteModel datos) => guardarDatos(datos);
+
+  DatosClienteModel _normalizarDatos(DatosClienteModel datos) {
+    final dept = _buscarDepartamento(datos.departamentoId);
+    final zonaId = datos.zonaId ?? dept?.zonaId;
+    final zonaNombre = _buscarZonaNombre(zonaId, fallback: datos.zonaNombre);
+
+    return datos.copyWith(
+      zonaId: zonaId,
+      zonaNombre: zonaNombre,
+      departamentoNombre: dept?.nombre ?? datos.departamentoNombre,
+    );
+  }
+
+  void seleccionarMetodo(MetodoPagoModel metodo) {
+    metodoSeleccionado = metodo;
+    notifyListeners();
+  }
+
+  Future<void> calcularEnvioSilencioso() async {
+    try {
+      await _calcularEnvioInterno();
+    } catch (_) {}
+  }
+
+  Future<void> calcularEnvio() async {
+    await _calcularEnvioInterno();
+    notifyListeners();
+  }
+
+  Future<void> _calcularEnvioInterno() async {
+    final departamentoId = datosCliente?.departamentoId;
+    if (departamentoId == null || CartController.instance.subtotal <= 0) {
+      costoEnvio = 0;
+      zonaEnvio = '';
+      porcentajeEnvio = 0;
+      return;
+    }
+
+    try {
+      final preview = await _service.previewCostoEnvio(
+        subtotal: CartController.instance.subtotal,
+        departamentoId: departamentoId,
+      );
+      costoEnvio = _toDouble(preview['costo_envio']);
+      zonaEnvio = (preview['zona_nombre'] ?? '').toString();
+      porcentajeEnvio = _toDouble(preview['porcentaje_envio']);
+    } catch (_) {
+      final dept = _buscarDepartamento(departamentoId);
+      final tarifa = _buscarTarifaPorZona(dept?.zonaId);
+      porcentajeEnvio = tarifa?.porcentajeEnvio ?? 0;
+      zonaEnvio = tarifa?.nombreZona ?? '';
+      costoEnvio = CartController.instance.subtotal * (porcentajeEnvio / 100);
+    }
+  }
+
   Future<PedidoModel?> confirmarPedido({
     required String referenciaTransferencia,
     String observacion = '',
   }) async {
-    final referencia = referenciaTransferencia.trim();
-    if (referencia.isEmpty) {
-      error = 'Ingresá la referencia de transferencia.';
+    if (requiereDatosCliente) {
+      error = 'Completá zona, departamento, municipio, dirección y referencia antes de pedir.';
       notifyListeners();
       return null;
     }
     if (metodoSeleccionado == null) {
-      error = 'Seleccioná un método de pago activo.';
+      error = 'Seleccioná un método de pago.';
       notifyListeners();
       return null;
     }
-    if (requiereDatosCliente) {
-      error = 'Completá tus datos de entrega antes de confirmar.';
+    if (referenciaTransferencia.trim().isEmpty) {
+      error = 'Ingresá la referencia de la transferencia.';
       notifyListeners();
       return null;
     }
+
     saving = true;
     error = null;
     notifyListeners();
+
     try {
-      final pedido = await _service.realizarPedido(
+      final result = await _service.realizarPedido(
         metodoPagoId: metodoSeleccionado!.id,
-        referenciaTransferencia: referencia,
-        observacion: observacion,
+        referenciaTransferencia: referenciaTransferencia.trim(),
+        observacion: observacion.trim(),
       );
       await CartController.instance.cargarCarrito();
-      return pedido;
+      return result;
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
       return null;
     } finally {
       saving = false;
@@ -161,30 +251,39 @@ class CheckoutController extends ChangeNotifier {
     }
   }
 
-  Future<void> _previewEnvio() async {
-    costoEnvio = 0;
-    porcentajeEnvio = 0;
-    zonaEnvio = '';
-    final depId = datosCliente?.departamentoId;
-    if (depId == null || subtotal <= 0) return;
-    try {
-      final data = await _service.previewCostoEnvio(subtotal: subtotal, departamentoId: depId);
-      costoEnvio = _toDouble(data['costo_envio']);
-      porcentajeEnvio = _toDouble(data['porcentaje_envio']);
-      zonaEnvio = (data['zona_nombre'] ?? data['tarifa_nombre'] ?? '').toString();
-    } catch (_) {
-      // El preview no debe bloquear el checkout visual; el backend valida en el pedido.
+  DepartamentoModel? _buscarDepartamento(int? departamentoId) {
+    if (departamentoId == null) return null;
+    for (final item in departamentos) {
+      if (item.id == departamentoId) return item;
     }
+    return null;
   }
 
-  String _friendlyError(Object e) {
-    final text = e.toString().replaceFirst('Exception: ', '').trim();
-    return text.isEmpty ? 'No se pudo procesar la operación.' : text;
+  String _buscarZonaNombre(int? zonaId, {String fallback = ''}) {
+    if (zonaId == null) return fallback;
+    for (final item in zonas) {
+      if (item.id == zonaId) return item.nombreZona;
+    }
+    return fallback;
   }
 
-  double _toDouble(dynamic value) {
+  TarifaEnvioModel? _buscarTarifaPorZona(int? zonaId) {
+    if (zonaId != null) {
+      for (final tarifa in tarifasEnvio) {
+        if (tarifa.zonaId == zonaId) return tarifa;
+      }
+    }
+    for (final tarifa in tarifasEnvio) {
+      if (tarifa.esDefault) return tarifa;
+    }
+    return tarifasEnvio.isNotEmpty ? tarifasEnvio.first : null;
+  }
+
+  static double _toDouble(dynamic value) {
     if (value is double) return value;
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString().replaceAll(',', '.') ?? '') ?? 0;
   }
+
+  String _cleanError(Object e) => e.toString().replaceFirst('Exception: ', '');
 }

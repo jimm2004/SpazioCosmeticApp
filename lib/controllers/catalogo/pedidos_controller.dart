@@ -4,15 +4,14 @@ import '../../models/catalogo/pedido_model.dart';
 import '../../services/catalogo_service.dart';
 
 class PedidosController extends ChangeNotifier {
-  final CatalogoService _service;
+  final CatalogoService _service = CatalogoService();
 
-  PedidosController({CatalogoService? service}) : _service = service ?? CatalogoService();
-
+  List<PedidoModel> pedidos = [];
+  PedidoModel? seleccionado;
   bool loading = false;
   bool saving = false;
   String? error;
-  List<PedidoModel> pedidos = <PedidoModel>[];
-  PedidoModel? seleccionado;
+  String? message;
 
   Future<void> cargarPedidos() async {
     loading = true;
@@ -20,24 +19,23 @@ class PedidosController extends ChangeNotifier {
     notifyListeners();
     try {
       pedidos = await _service.listarPedidos();
-      pedidos.sort((a, b) => b.id.compareTo(a.id));
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
     } finally {
       loading = false;
       notifyListeners();
     }
   }
 
-  Future<PedidoModel?> verDetalle(int id) async {
+  Future<PedidoModel?> verDetalle(int pedidoId) async {
     loading = true;
     error = null;
     notifyListeners();
     try {
-      seleccionado = await _service.verPedido(id);
+      seleccionado = await _service.verPedido(pedidoId);
       return seleccionado;
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
       return null;
     } finally {
       loading = false;
@@ -51,23 +49,29 @@ class PedidosController extends ChangeNotifier {
     String observacion = '',
   }) async {
     if (referenciaTransferencia.trim().isEmpty) {
-      error = 'Ingresá la nueva referencia.';
+      error = 'Ingresá la nueva referencia de transferencia.';
       notifyListeners();
       return false;
     }
+
     saving = true;
     error = null;
+    message = null;
     notifyListeners();
+
     try {
-      seleccionado = await _service.corregirReferenciaTransferencia(
+      final pedido = await _service.corregirReferenciaTransferencia(
         pedidoId: pedidoId,
-        referenciaTransferencia: referenciaTransferencia,
-        observacion: observacion,
+        referenciaTransferencia: referenciaTransferencia.trim(),
+        observacion: observacion.trim(),
       );
-      await cargarPedidos();
+      seleccionado = pedido;
+      final index = pedidos.indexWhere((p) => p.id == pedidoId);
+      if (index >= 0) pedidos[index] = pedido;
+      message = 'Referencia actualizada. El pedido volvió a revisión contable.';
       return true;
     } catch (e) {
-      error = _friendlyError(e);
+      error = _cleanError(e);
       return false;
     } finally {
       saving = false;
@@ -75,8 +79,5 @@ class PedidosController extends ChangeNotifier {
     }
   }
 
-  String _friendlyError(Object e) {
-    final text = e.toString().replaceFirst('Exception: ', '').trim();
-    return text.isEmpty ? 'No se pudieron cargar los pedidos.' : text;
-  }
+  String _cleanError(Object e) => e.toString().replaceFirst('Exception: ', '');
 }
