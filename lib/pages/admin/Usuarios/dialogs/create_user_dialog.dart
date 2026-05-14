@@ -2,6 +2,76 @@ import 'package:flutter/material.dart';
 
 import '../../../../controllers/admin/usuarios_controller.dart';
 
+const String roleAdministrador = 'administrador';
+const String roleDespacho = 'despacho';
+const String roleContabilidad = 'administracion_contable';
+
+String _roleTitle(String role) {
+  if (role == roleAdministrador) return 'Administrador Total';
+  if (role == roleContabilidad) return 'Administración Contable';
+  return 'Encargado de Despacho';
+}
+
+String _roleButtonText(String role) {
+  if (role == roleAdministrador) return 'Crear Admin';
+  if (role == roleContabilidad) return 'Crear Contabilidad';
+  return 'Crear Despacho';
+}
+
+String _roleDescription(String role) {
+  if (role == roleAdministrador) {
+    return 'Tendrá acceso completo al panel administrativo.';
+  }
+
+  if (role == roleContabilidad) {
+    return 'Podrá revisar pagos, transferencias y gestión contable.';
+  }
+
+  return 'Podrá gestionar tareas operativas de despacho.';
+}
+
+String _roleChangedMessage(String role) {
+  if (role == roleAdministrador) {
+    return 'Rol cambiado: tendrá acceso total administrativo.';
+  }
+
+  if (role == roleContabilidad) {
+    return 'Rol cambiado: gestionará revisión contable y pagos.';
+  }
+
+  return 'Rol cambiado: gestionará despacho y operaciones.';
+}
+
+String _roleSnackMessage(String role) {
+  if (role == roleAdministrador) {
+    return 'Cambio aplicado: Administrador Total.';
+  }
+
+  if (role == roleContabilidad) {
+    return 'Cambio aplicado: Administración Contable.';
+  }
+
+  return 'Cambio aplicado: Encargado de Despacho.';
+}
+
+Color _roleColor(String role) {
+  if (role == roleAdministrador) return const Color(0xFFE91E63);
+  if (role == roleContabilidad) return const Color(0xFF009688);
+  return const Color(0xFFF5A623);
+}
+
+IconData _roleIcon(String role) {
+  if (role == roleAdministrador) {
+    return Icons.admin_panel_settings_rounded;
+  }
+
+  if (role == roleContabilidad) {
+    return Icons.account_balance_wallet_rounded;
+  }
+
+  return Icons.local_shipping_rounded;
+}
+
 class CreateUserDialog extends StatefulWidget {
   const CreateUserDialog({super.key});
 
@@ -18,7 +88,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
-  String selectedRole = 'despacho';
+  String selectedRole = roleDespacho;
 
   bool isSaving = false;
   bool obscurePassword = true;
@@ -70,8 +140,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
         );
       } else if (_formularioListo) {
         _setLocalAlert(
-          message:
-              'Listo para crear ${selectedRole == 'administrador' ? 'Administrador Total' : 'Encargado de Despacho'}.',
+          message: 'Listo para crear ${_roleTitle(selectedRole)}.',
           icon: Icons.check_circle_rounded,
           color: Colors.green,
         );
@@ -162,7 +231,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
     if (hasUpper) score += 0.12;
     if (hasSpecial) score += 0.11;
 
-    return score.clamp(0, 1);
+    return score.clamp(0.0, 1.0).toDouble();
   }
 
   String get _passwordStrengthText {
@@ -265,6 +334,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
     emailController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
+
     super.dispose();
   }
 
@@ -306,7 +376,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final bool esAdmin = selectedRole == 'administrador';
+    final Color roleColor = _roleColor(selectedRole);
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -327,9 +397,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _DialogHeader(
-                  selectedRole: selectedRole,
-                ),
+                _DialogHeader(selectedRole: selectedRole),
 
                 const SizedBox(height: 18),
 
@@ -341,9 +409,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
 
                 const SizedBox(height: 18),
 
-                _RolePreviewCard(
-                  selectedRole: selectedRole,
-                ),
+                _RolePreviewCard(selectedRole: selectedRole),
 
                 const SizedBox(height: 18),
 
@@ -354,9 +420,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
                     'Nombre completo',
                     Icons.person_outline_rounded,
                   ),
-                  onChanged: (_) {
-                    setState(() {});
-                  },
+                  onChanged: (_) => setState(() {}),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Ingresa el nombre';
@@ -379,9 +443,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
                     'Correo electrónico',
                     Icons.email_outlined,
                   ),
-                  onChanged: (_) {
-                    setState(() {});
-                  },
+                  onChanged: (_) => setState(() {}),
                   validator: (value) {
                     final email = value?.trim() ?? '';
 
@@ -408,14 +470,21 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
                   ),
                   items: const [
                     DropdownMenuItem(
-                      value: 'despacho',
+                      value: roleDespacho,
                       child: Text(
                         'Encargado de Despacho',
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                     DropdownMenuItem(
-                      value: 'administrador',
+                      value: roleContabilidad,
+                      child: Text(
+                        'Administración Contable',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: roleAdministrador,
                       child: Text(
                         'Administrador Total',
                         style: TextStyle(fontWeight: FontWeight.w700),
@@ -425,33 +494,21 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
                   onChanged: isSaving
                       ? null
                       : (value) {
-                          final nuevoRol = value ?? 'despacho';
+                          final nuevoRol = value ?? roleDespacho;
 
                           setState(() {
                             selectedRole = nuevoRol;
                             _setLocalAlert(
-                              message: nuevoRol == 'administrador'
-                                  ? 'Rol cambiado: tendrá acceso total administrativo.'
-                                  : 'Rol cambiado: gestionará despacho y operaciones.',
-                              icon: nuevoRol == 'administrador'
-                                  ? Icons.admin_panel_settings_rounded
-                                  : Icons.local_shipping_rounded,
-                              color: nuevoRol == 'administrador'
-                                  ? const Color(0xFFE91E63)
-                                  : const Color(0xFFF5A623),
+                              message: _roleChangedMessage(nuevoRol),
+                              icon: _roleIcon(nuevoRol),
+                              color: _roleColor(nuevoRol),
                             );
                           });
 
                           _showChangeSnack(
-                            message: nuevoRol == 'administrador'
-                                ? 'Cambio aplicado: Administrador Total.'
-                                : 'Cambio aplicado: Encargado de Despacho.',
-                            color: nuevoRol == 'administrador'
-                                ? const Color(0xFFE91E63)
-                                : const Color(0xFFF5A623),
-                            icon: nuevoRol == 'administrador'
-                                ? Icons.admin_panel_settings_rounded
-                                : Icons.local_shipping_rounded,
+                            message: _roleSnackMessage(nuevoRol),
+                            color: _roleColor(nuevoRol),
+                            icon: _roleIcon(nuevoRol),
                           );
                         },
                 ),
@@ -488,9 +545,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
                       },
                     ),
                   ),
-                  onChanged: (_) {
-                    setState(() {});
-                  },
+                  onChanged: (_) => setState(() {}),
                   validator: (value) {
                     final pass = value?.trim() ?? '';
 
@@ -546,9 +601,7 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
                       },
                     ),
                   ),
-                  onChanged: (_) {
-                    setState(() {});
-                  },
+                  onChanged: (_) => setState(() {}),
                   validator: (value) {
                     final confirm = value?.trim() ?? '';
 
@@ -605,23 +658,15 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
                                 color: Colors.white,
                               ),
                             )
-                          : Icon(
-                              esAdmin
-                                  ? Icons.admin_panel_settings_rounded
-                                  : Icons.local_shipping_rounded,
-                            ),
+                          : Icon(_roleIcon(selectedRole)),
                       label: Text(
                         isSaving
                             ? 'Guardando...'
-                            : esAdmin
-                                ? 'Crear Admin'
-                                : 'Crear Despacho',
+                            : _roleButtonText(selectedRole),
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: esAdmin
-                            ? const Color(0xFFE91E63)
-                            : const Color(0xFF5E35B1),
+                        backgroundColor: roleColor,
                         disabledBackgroundColor: Colors.grey.shade300,
                         foregroundColor: Colors.white,
                         disabledForegroundColor: Colors.grey.shade600,
@@ -655,9 +700,7 @@ class _DialogHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool esAdmin = selectedRole == 'administrador';
-    final Color color =
-        esAdmin ? const Color(0xFFE91E63) : const Color(0xFF5E35B1);
+    final Color color = _roleColor(selectedRole);
 
     return Row(
       children: [
@@ -669,9 +712,7 @@ class _DialogHeader extends StatelessWidget {
             shape: BoxShape.circle,
           ),
           child: Icon(
-            esAdmin
-                ? Icons.admin_panel_settings_rounded
-                : Icons.local_shipping_rounded,
+            _roleIcon(selectedRole),
             color: color,
           ),
         ),
@@ -742,10 +783,7 @@ class _RolePreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool esAdmin = selectedRole == 'administrador';
-
-    final Color color =
-        esAdmin ? const Color(0xFFE91E63) : const Color(0xFFF5A623);
+    final Color color = _roleColor(selectedRole);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 230),
@@ -764,9 +802,7 @@ class _RolePreviewCard extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              esAdmin
-                  ? Icons.admin_panel_settings_rounded
-                  : Icons.local_shipping_rounded,
+              _roleIcon(selectedRole),
               color: color,
             ),
           ),
@@ -776,7 +812,7 @@ class _RolePreviewCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  esAdmin ? 'Administrador Total' : 'Encargado de Despacho',
+                  _roleTitle(selectedRole),
                   style: TextStyle(
                     color: color,
                     fontSize: 15,
@@ -785,9 +821,7 @@ class _RolePreviewCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  esAdmin
-                      ? 'Tendrá acceso completo al panel administrativo.'
-                      : 'Podrá gestionar tareas operativas de despacho.',
+                  _roleDescription(selectedRole),
                   style: TextStyle(
                     color: Colors.grey.shade700,
                     fontSize: 12,
@@ -857,18 +891,13 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool esAdmin = role == 'administrador';
-
-    final Color color =
-        isReady ? Colors.green : Colors.grey.shade500;
+    final Color color = isReady ? Colors.green : Colors.grey.shade500;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isReady
-            ? Colors.green.withAlpha(18)
-            : Colors.grey.shade100,
+        color: isReady ? Colors.green.withAlpha(18) : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isReady ? Colors.green.withAlpha(40) : Colors.grey.shade200,
@@ -877,16 +906,14 @@ class _SummaryCard extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            isReady
-                ? Icons.fact_check_rounded
-                : Icons.pending_actions_rounded,
+            isReady ? Icons.fact_check_rounded : Icons.pending_actions_rounded,
             color: color,
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               isReady
-                  ? 'Se creará ${name.isEmpty ? 'el usuario' : name} como ${esAdmin ? 'Administrador Total' : 'Encargado de Despacho'} usando $email.'
+                  ? 'Se creará ${name.isEmpty ? 'el usuario' : name} como ${_roleTitle(role)} usando $email.'
                   : 'Resumen pendiente: completa nombre, correo, contraseña y confirmación.',
               style: TextStyle(
                 color: color,

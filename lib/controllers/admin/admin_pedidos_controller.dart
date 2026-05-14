@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../models/admin/admin_pedido_model.dart';
+import '../../models/admin/despacho_documento_model.dart';
 import '../../services/admin_pedidos_service.dart';
 
 class AdminPedidosController extends ChangeNotifier {
@@ -9,6 +10,7 @@ class AdminPedidosController extends ChangeNotifier {
   AdminPedidosController(this.service);
 
   bool loading = false;
+  bool preparingDespacho = false;
   String? error;
   String? lastMessage;
 
@@ -22,6 +24,7 @@ class AdminPedidosController extends ChangeNotifier {
 
   List<AdminPedido> pedidos = [];
   AdminPedidoFull? pedidoSeleccionado;
+  DespachoDocumentoData? documentoDespacho;
 
   void limpiarMensaje() {
     lastMessage = null;
@@ -31,6 +34,7 @@ class AdminPedidosController extends ChangeNotifier {
 
   void limpiarDetalle() {
     pedidoSeleccionado = null;
+    documentoDespacho = null;
     notifyListeners();
   }
 
@@ -153,6 +157,35 @@ class AdminPedidosController extends ChangeNotifier {
     }
   }
 
+  /// Carga el detalle completo del pedido y lo adapta para la vista/PDF de despacho.
+  /// Este método hace solo 1 GET al endpoint /admin/pedidos/{id}.
+  Future<DespachoDocumentoData?> prepararDocumentoDespacho(int pedidoId) async {
+    preparingDespacho = true;
+    error = null;
+    lastMessage = null;
+    documentoDespacho = null;
+    notifyListeners();
+
+    try {
+      final raw = await service.verPedidoParaDocumento(pedidoId);
+      final documento = DespachoDocumentoData.fromAdminPedidoApi(raw);
+
+      if (documento.pedidoId <= 0) {
+        throw Exception('No se pudo identificar el pedido para despacho.');
+      }
+
+      documentoDespacho = documento;
+      lastMessage = 'Vista de despacho preparada para ${documento.codigoPedido}.';
+      return documento;
+    } catch (e) {
+      error = _parseError(e);
+      return null;
+    } finally {
+      preparingDespacho = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> aprobar(int pedidoId) async {
     loading = true;
     error = null;
@@ -161,9 +194,6 @@ class AdminPedidosController extends ChangeNotifier {
 
     try {
       lastMessage = await service.aprobarTransferencia(pedidoId);
-
-      // Después de aprobar, el pedido sale de contabilidad
-      // y pasa a la cola de despacho.
       await cargarPendientesContabilidad();
     } catch (e) {
       error = _parseError(e);
@@ -179,13 +209,7 @@ class AdminPedidosController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      lastMessage = await service.rechazarTransferencia(
-        pedidoId,
-        motivo: motivo,
-      );
-
-      // Después de rechazar, sale de pendientes y queda esperando
-      // corrección del cliente.
+      lastMessage = await service.rechazarTransferencia(pedidoId, motivo: motivo);
       await cargarPendientesContabilidad();
     } catch (e) {
       error = _parseError(e);
@@ -202,9 +226,6 @@ class AdminPedidosController extends ChangeNotifier {
 
     try {
       lastMessage = await service.despacharPedido(pedidoId);
-
-      // Después de despachar, el pedido ya no debe aparecer
-      // en la cola de despacho.
       await cargarPendientesDespacho();
     } catch (e) {
       error = _parseError(e);
@@ -223,11 +244,7 @@ class AdminPedidosController extends ChangeNotifier {
 
   String _parseError(Object e) {
     final text = e.toString();
-
-    if (text.startsWith('Exception: ')) {
-      return text.replaceFirst('Exception: ', '');
-    }
-
+    if (text.startsWith('Exception: ')) return text.replaceFirst('Exception: ', '');
     return text;
   }
 }

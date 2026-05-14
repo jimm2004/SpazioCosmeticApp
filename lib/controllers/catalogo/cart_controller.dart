@@ -5,27 +5,27 @@ import '../../services/catalogo_service.dart';
 
 class CartController extends ChangeNotifier {
   static final CartController instance = CartController._internal();
-  CartController._internal();
-
   final CatalogoService _service = CatalogoService();
 
-  CarritoModel? cart;
-  bool loading = false;
-  String? error;
+  CartController._internal();
 
-  int get totalItems => cart?.totalItems ?? 0;
-  double get subtotal => cart?.subtotal ?? 0;
-  double get total => subtotal;
-  List<CarritoItemModel> get items => cart?.items ?? [];
+  bool loading = false;
+  bool saving = false;
+  String? error;
+  CarritoModel? carrito;
+
+  List<CarritoItemModel> get items => carrito?.items ?? const <CarritoItemModel>[];
+  double get subtotal => carrito?.subtotal ?? 0;
+  int get totalItems => carrito?.totalItems ?? 0;
 
   Future<void> cargarCarrito() async {
     loading = true;
     error = null;
     notifyListeners();
     try {
-      cart = await _service.verCarrito();
+      carrito = await _service.verCarrito();
     } catch (e) {
-      error = e.toString().replaceFirst('Exception: ', '');
+      error = _friendlyError(e);
     } finally {
       loading = false;
       notifyListeners();
@@ -37,75 +37,93 @@ class CartController extends ChangeNotifier {
     int? productoImagenId,
     int cantidad = 1,
   }) async {
-    loading = true;
+    if (productoMasterId <= 0) {
+      error = 'Producto inválido.';
+      notifyListeners();
+      return false;
+    }
+    if (cantidad <= 0) {
+      error = 'La cantidad debe ser mayor que cero.';
+      notifyListeners();
+      return false;
+    }
+    saving = true;
     error = null;
     notifyListeners();
     try {
-      cart = await _service.agregarAlCarrito(
+      carrito = await _service.agregarAlCarrito(
         productoMasterId: productoMasterId,
         productoImagenId: productoImagenId,
         cantidad: cantidad,
       );
       return true;
     } catch (e) {
-      error = e.toString().replaceFirst('Exception: ', '');
+      error = _friendlyError(e);
       return false;
     } finally {
-      loading = false;
+      saving = false;
       notifyListeners();
     }
   }
 
   Future<bool> editarCantidad(int detalleId, int cantidad) async {
+    if (detalleId <= 0) {
+      error = 'Ítem inválido.';
+      notifyListeners();
+      return false;
+    }
     if (cantidad <= 0) return quitarItem(detalleId);
-    loading = true;
+    saving = true;
     error = null;
     notifyListeners();
     try {
-      cart = await _service.editarItemCarrito(detalleId: detalleId, cantidad: cantidad);
+      carrito = await _service.editarItemCarrito(detalleId: detalleId, cantidad: cantidad);
       return true;
     } catch (e) {
-      error = e.toString().replaceFirst('Exception: ', '');
+      error = _friendlyError(e);
       return false;
     } finally {
-      loading = false;
+      saving = false;
       notifyListeners();
     }
   }
 
   Future<bool> quitarItem(int detalleId) async {
-    loading = true;
+    saving = true;
     error = null;
     notifyListeners();
     try {
-      cart = await _service.quitarItemCarrito(detalleId);
+      carrito = await _service.quitarItemCarrito(detalleId);
       return true;
     } catch (e) {
-      error = e.toString().replaceFirst('Exception: ', '');
+      error = _friendlyError(e);
       return false;
     } finally {
-      loading = false;
+      saving = false;
       notifyListeners();
     }
-  }
-
-  Future<bool> limpiar() async {
-    return vaciarCarrito();
   }
 
   Future<bool> vaciarCarrito() async {
-    loading = true;
+    saving = true;
     error = null;
     notifyListeners();
     try {
-      cart = await _service.vaciarCarrito();
+      carrito = await _service.vaciarCarrito();
       return true;
     } catch (e) {
-      error = e.toString().replaceFirst('Exception: ', '');
+      error = _friendlyError(e);
       return false;
     } finally {
-      loading = false;
+      saving = false;
       notifyListeners();
     }
   }
+
+  void limpiarLocal() {
+    carrito = const CarritoModel(items: <CarritoItemModel>[], subtotal: 0, totalItems: 0);
+    notifyListeners();
+  }
+
+  String _friendlyError(Object e) => e.toString().replaceFirst('Exception: ', '').trim();
 }

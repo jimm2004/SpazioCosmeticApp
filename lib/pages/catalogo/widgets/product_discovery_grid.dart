@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../controllers/catalogo/cart_controller.dart';
 import '../cart_page.dart';
+import 'web_safe_network_image.dart';
 
 class ProductDiscoveryGrid extends StatelessWidget {
   final List<Map<String, dynamic>> productos;
@@ -28,61 +29,68 @@ class ProductDiscoveryGrid extends StatelessWidget {
       );
     }
 
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: MediaQuery.of(context).size.width < 700 ? 16 : 40,
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          int count;
-          double ratio;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-          if (constraints.maxWidth >= 1280) {
-            count = 4;
-            ratio = .72;
-          } else if (constraints.maxWidth >= 920) {
-            count = 3;
-            ratio = .70;
-          } else if (constraints.maxWidth >= 620) {
-            count = 2;
-            ratio = .74;
-          } else {
-            count = 1;
-            ratio = .88;
-          }
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1220),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: screenWidth < 700 ? 16 : 28),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              int count;
+              double ratio;
 
-          return GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: productos.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: count,
-              crossAxisSpacing: 22,
-              mainAxisSpacing: 22,
-              childAspectRatio: ratio,
-            ),
-            itemBuilder: (context, index) {
-              return TweenAnimationBuilder<double>(
-                duration: Duration(milliseconds: 240 + (index * 45)),
-                curve: Curves.easeOutCubic,
-                tween: Tween(begin: 0, end: 1),
-                builder: (context, value, child) {
-                  return Opacity(
-                    opacity: value,
-                    child: Transform.translate(
-                      offset: Offset(0, 22 * (1 - value)),
-                      child: child,
+              if (constraints.maxWidth >= 1280) {
+                count = 4;
+                ratio = .76;
+              } else if (constraints.maxWidth >= 920) {
+                count = 3;
+                ratio = .74;
+              } else if (constraints.maxWidth >= 600) {
+                count = 2;
+                ratio = .72;
+              } else {
+                count = 1;
+                ratio = .82;
+              }
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                cacheExtent: 420,
+                itemCount: productos.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: count,
+                  crossAxisSpacing: 20,
+                  mainAxisSpacing: 20,
+                  childAspectRatio: ratio,
+                ),
+                itemBuilder: (context, index) {
+                  return TweenAnimationBuilder<double>(
+                    duration: Duration(milliseconds: 240 + (index * 38)),
+                    curve: Curves.easeOutCubic,
+                    tween: Tween(begin: 0, end: 1),
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, 24 * (1 - value)),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: ProductShowcaseCard(
+                      producto: productos[index],
+                      onCartChanged: onCartChanged,
                     ),
                   );
                 },
-                child: ProductShowcaseCard(
-                  producto: productos[index],
-                  onCartChanged: onCartChanged,
-                ),
               );
             },
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -188,12 +196,12 @@ class _ProductShowcaseCardState extends State<ProductShowcaseCard> {
           color: Colors.transparent,
           child: InkWell(
             onTap: _openDetail,
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(30),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(30),
                 border: Border.all(color: _hover ? const Color(0xFFE91E63).withOpacity(.25) : Colors.grey.shade200),
                 boxShadow: [
                   BoxShadow(
@@ -208,7 +216,7 @@ class _ProductShowcaseCardState extends State<ProductShowcaseCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    flex: 62,
+                    flex: 66,
                     child: Stack(
                       children: [
                         Positioned.fill(
@@ -224,24 +232,21 @@ class _ProductShowcaseCardState extends State<ProductShowcaseCard> {
                                     onPageChanged: (value) => setState(() => _index = value),
                                     itemBuilder: (_, i) {
                                       return Padding(
-                                        padding: const EdgeInsets.all(14),
-                                        child: Image.network(
-                                          images[i].url,
+                                        padding: const EdgeInsets.all(18),
+                                        child: WebSafeNetworkImage(
+                                          url: images[i].url,
                                           fit: BoxFit.contain,
-                                          errorBuilder: (_, _, _) => const Icon(
+                                          errorWidget: const Icon(
                                             Icons.image_not_supported_outlined,
                                             color: Colors.grey,
                                             size: 48,
                                           ),
-                                          loadingBuilder: (_, child, progress) {
-                                            if (progress == null) return child;
-                                            return const Center(
-                                              child: CircularProgressIndicator(
-                                                color: Color(0xFFE91E63),
-                                                strokeWidth: 2,
-                                              ),
-                                            );
-                                          },
+                                          loadingWidget: const Center(
+                                            child: CircularProgressIndicator(
+                                              color: Color(0xFFE91E63),
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
                                         ),
                                       );
                                     },
@@ -294,7 +299,7 @@ class _ProductShowcaseCardState extends State<ProductShowcaseCard> {
                     ),
                   ),
                   Expanded(
-                    flex: 38,
+                    flex: 34,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
                       child: Column(
@@ -508,10 +513,10 @@ class _ProductDetailSheetState extends State<ProductDetailSheet> {
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  height: MediaQuery.of(context).size.width < 680 ? 370 : 440,
+                  height: MediaQuery.of(context).size.width < 680 ? 390 : 500,
                   decoration: BoxDecoration(
                     color: const Color(0xFFFDFBFC),
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(30),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
                   clipBehavior: Clip.antiAlias,
@@ -524,10 +529,10 @@ class _ProductDetailSheetState extends State<ProductDetailSheet> {
                           itemBuilder: (_, i) {
                             return Padding(
                               padding: const EdgeInsets.all(16),
-                              child: Image.network(
-                                images[i].url,
+                              child: WebSafeNetworkImage(
+                                url: images[i].url,
                                 fit: BoxFit.contain,
-                                errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported_outlined, size: 58, color: Colors.grey),
+                                errorWidget: const Icon(Icons.image_not_supported_outlined, size: 58, color: Colors.grey),
                               ),
                             );
                           },
@@ -567,10 +572,10 @@ class _ProductDetailSheetState extends State<ProductDetailSheet> {
                                       width: selected ? 2 : 1,
                                     ),
                                   ),
-                                  child: Image.network(
-                                    images[i].url,
+                                  child: WebSafeNetworkImage(
+                                    url: images[i].url,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+                                    errorWidget: const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
                                   ),
                                 ),
                               );
