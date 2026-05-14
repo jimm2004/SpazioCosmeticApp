@@ -8,7 +8,9 @@ import '../../models/catalogo/datos_cliente_model.dart';
 import '../../models/catalogo/producto_catalogo_model.dart';
 import '../auth/auth_page.dart';
 import 'cart_page.dart';
+import 'pedidos_page.dart';
 import 'mood_palette.dart';
+import 'widgets/web_safe_network_image.dart';
 
 class CatalogoPage extends StatefulWidget {
   final String userName;
@@ -50,7 +52,7 @@ class _CatalogoPageState extends State<CatalogoPage> {
 
   Future<void> _refresh() async {
     await Future.wait([
-      _catalogo.cargarInicio(),
+      _catalogo.cargarInicio(forceRefresh: true),
       CartController.instance.cargarCarrito(),
     ]);
   }
@@ -81,6 +83,10 @@ class _CatalogoPageState extends State<CatalogoPage> {
     Navigator.push(context, MaterialPageRoute(builder: (_) => const CartPage()));
   }
 
+  void _abrirPedidos() {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const PedidosPage()));
+  }
+
   void _abrirDetalle(ProductoCatalogo producto) {
     showModalBottomSheet(
       context: context,
@@ -109,6 +115,7 @@ class _CatalogoPageState extends State<CatalogoPage> {
           onRefresh: _refresh,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
+            cacheExtent: 160,
             slivers: [
               SliverToBoxAdapter(
                 child: _MoodHeader(
@@ -123,6 +130,7 @@ class _CatalogoPageState extends State<CatalogoPage> {
                     _buscar();
                   },
                   onAccount: _abrirCuenta,
+                  onPedidos: _abrirPedidos,
                   onCart: _abrirCarrito,
                 ),
               ),
@@ -203,6 +211,7 @@ class _MoodHeader extends StatelessWidget {
   final VoidCallback onSearch;
   final VoidCallback onClear;
   final VoidCallback onAccount;
+  final VoidCallback onPedidos;
   final VoidCallback onCart;
 
   const _MoodHeader({
@@ -214,6 +223,7 @@ class _MoodHeader extends StatelessWidget {
     required this.onSearch,
     required this.onClear,
     required this.onAccount,
+    required this.onPedidos,
     required this.onCart,
   });
 
@@ -251,6 +261,8 @@ class _MoodHeader extends StatelessWidget {
                 ),
               ),
               _HeaderIcon(icon: Icons.person_rounded, onTap: onAccount),
+              const SizedBox(width: 8),
+              _PedidosHeaderButton(onTap: onPedidos),
               const SizedBox(width: 8),
               ListenableBuilder(
                 listenable: CartController.instance,
@@ -356,6 +368,44 @@ class _HeaderIcon extends StatelessWidget {
   }
 }
 
+
+class _PedidosHeaderButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _PedidosHeaderButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Mis pedidos',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(15),
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(.16),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.white.withOpacity(.20)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.receipt_long_rounded, color: Colors.white, size: 19),
+              SizedBox(width: 6),
+              Text(
+                'Pedidos',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _NovedadesCarousel extends StatelessWidget {
   final List<dynamic> novedades;
   const _NovedadesCarousel({required this.novedades});
@@ -388,7 +438,7 @@ class _NovedadesCarousel extends StatelessWidget {
                     Positioned.fill(
                       child: n.imagenUrl.isEmpty
                           ? Container(color: MoodPalette.softPink)
-                          : Image.network(n.imagenUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: MoodPalette.softPink)),
+                          : WebSafeNetworkImage(url: n.imagenUrl, fit: BoxFit.cover, errorWidget: Container(color: MoodPalette.softPink)),
                     ),
                     Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.black.withOpacity(.65), Colors.black.withOpacity(.15)], begin: Alignment.bottomCenter, end: Alignment.topCenter)))),
                     Positioned(
@@ -436,6 +486,7 @@ class _CategorySection extends StatelessWidget {
             height: 292,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 18),
+              cacheExtent: 120,
               scrollDirection: Axis.horizontal,
               itemCount: productos.length,
               separatorBuilder: (_, __) => const SizedBox(width: 13),
@@ -469,7 +520,7 @@ class _ProductCard extends StatelessWidget {
                 decoration: const BoxDecoration(color: MoodPalette.softPink, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  child: Image.network(producto.imagenPrincipal, width: double.infinity, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported_outlined)),
+                  child: WebSafeNetworkImage(url: producto.imagenPrincipal, width: double.infinity, fit: BoxFit.contain, errorWidget: const Icon(Icons.image_not_supported_outlined)),
                 ),
               ),
             ),
@@ -541,7 +592,7 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
               Container(
                 height: 310,
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(26), boxShadow: [MoodPalette.cardShadow(.07)]),
-                child: Image.network(current, fit: BoxFit.contain, width: double.infinity, errorBuilder: (_, __, ___) => const Icon(Icons.image_outlined, size: 60)),
+                child: WebSafeNetworkImage(url: current, fit: BoxFit.contain, width: double.infinity, errorWidget: const Icon(Icons.image_outlined, size: 60)),
               ),
               if (imgs.length > 1) ...[
                 const SizedBox(height: 12),
@@ -556,7 +607,7 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
                           margin: const EdgeInsets.symmetric(horizontal: 5),
                           height: 74,
                           decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: selected ? MoodPalette.pink : Colors.grey.shade200, width: selected ? 2 : 1), color: Colors.white),
-                          child: Image.network(url, fit: BoxFit.contain),
+                          child: WebSafeNetworkImage(url: url, fit: BoxFit.contain),
                         ),
                       ),
                     );

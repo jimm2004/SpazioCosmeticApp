@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../controllers/catalogo/cart_controller.dart';
 import '../cart_page.dart';
+import 'web_safe_network_image.dart';
 
 class ProductDiscoveryGrid extends StatelessWidget {
   final List<Map<String, dynamic>> productos;
@@ -225,23 +226,20 @@ class _ProductShowcaseCardState extends State<ProductShowcaseCard> {
                                     itemBuilder: (_, i) {
                                       return Padding(
                                         padding: const EdgeInsets.all(14),
-                                        child: Image.network(
-                                          images[i].url,
+                                        child: WebSafeNetworkImage(
+                                          url: images[i].url,
                                           fit: BoxFit.contain,
-                                          errorBuilder: (_, _, _) => const Icon(
+                                          errorWidget: const Icon(
                                             Icons.image_not_supported_outlined,
                                             color: Colors.grey,
                                             size: 48,
                                           ),
-                                          loadingBuilder: (_, child, progress) {
-                                            if (progress == null) return child;
-                                            return const Center(
-                                              child: CircularProgressIndicator(
-                                                color: Color(0xFFE91E63),
-                                                strokeWidth: 2,
-                                              ),
-                                            );
-                                          },
+                                          loadingWidget: const Center(
+                                            child: CircularProgressIndicator(
+                                              color: Color(0xFFE91E63),
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
                                         ),
                                       );
                                     },
@@ -524,10 +522,10 @@ class _ProductDetailSheetState extends State<ProductDetailSheet> {
                           itemBuilder: (_, i) {
                             return Padding(
                               padding: const EdgeInsets.all(16),
-                              child: Image.network(
-                                images[i].url,
+                              child: WebSafeNetworkImage(
+                                url: images[i].url,
                                 fit: BoxFit.contain,
-                                errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported_outlined, size: 58, color: Colors.grey),
+                                errorWidget: const Icon(Icons.image_not_supported_outlined, size: 58, color: Colors.grey),
                               ),
                             );
                           },
@@ -567,10 +565,10 @@ class _ProductDetailSheetState extends State<ProductDetailSheet> {
                                       width: selected ? 2 : 1,
                                     ),
                                   ),
-                                  child: Image.network(
-                                    images[i].url,
+                                  child: WebSafeNetworkImage(
+                                    url: images[i].url,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+                                    errorWidget: const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
                                   ),
                                 ),
                               );

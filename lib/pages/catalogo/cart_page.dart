@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../controllers/catalogo/cart_controller.dart';
 import 'checkout_page.dart';
 import 'mood_palette.dart';
+import 'widgets/web_safe_network_image.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -102,7 +103,7 @@ class _CartPageState extends State<CartPage> {
                               width: 88,
                               height: 88,
                               color: MoodPalette.softPink,
-                              child: item.imagenUrl.isEmpty ? const Icon(Icons.image_outlined) : Image.network(item.imagenUrl, fit: BoxFit.contain),
+                              child: item.imagenUrl.isEmpty ? const Icon(Icons.image_outlined) : WebSafeNetworkImage(url: item.imagenUrl, fit: BoxFit.contain),
                             ),
                           ),
                           const SizedBox(width: 12),

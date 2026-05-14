@@ -27,6 +27,13 @@ class AdministradorPage extends StatelessWidget {
 
     final bool esDespacho = rolNormalizado == 'despacho';
 
+    final bool esContabilidad =
+        rolNormalizado == 'administracion_contable' ||
+        rolNormalizado == 'administración_contable' ||
+        rolNormalizado == 'contabilidad' ||
+        rolNormalizado == 'administracion contable' ||
+        rolNormalizado == 'administración contable';
+
     final List<_AdminOption> options = esAdministrador
         ? [
             _AdminOption(
@@ -47,11 +54,11 @@ class AdministradorPage extends StatelessWidget {
             ),
             _AdminOption(
               title: 'Pedidos',
-              subtitle: 'Control de pedidos realizados',
+              subtitle: 'Revisión contable de pedidos',
               icon: Icons.shopping_cart_checkout_rounded,
               color: const Color(0xFF00A86B),
               page: const AdminPedidosPage(),
-              tag: 'Ventas',
+              tag: 'Contabilidad',
             ),
             _AdminOption(
               title: 'Novedades',
@@ -79,7 +86,7 @@ class AdministradorPage extends StatelessWidget {
             ),
             _AdminOption(
               title: 'Despacho',
-              subtitle: 'Preparación y salida',
+              subtitle: 'Pedidos aprobados por contabilidad',
               icon: Icons.local_shipping_rounded,
               color: const Color(0xFF00ACC1),
               page: const DespachoPage(),
@@ -94,32 +101,45 @@ class AdministradorPage extends StatelessWidget {
               tag: 'Archivo',
             ),
           ]
-        : esDespacho
+        : esContabilidad
             ? [
                 _AdminOption(
-                  title: 'Despacho',
-                  subtitle: 'Preparación y salida',
-                  icon: Icons.local_shipping_rounded,
-                  color: const Color(0xFF00ACC1),
-                  page: const DespachoPage(),
-                  tag: 'Operación',
-                ),
-                _AdminOption(
-                  title: 'Historial',
-                  subtitle: 'Registro de despachos',
-                  icon: Icons.history_rounded,
-                  color: const Color(0xFF3949AB),
-                  page: const HistorialDespachoPage(),
-                  tag: 'Archivo',
+                  title: 'Pedidos',
+                  subtitle: 'Aprobar o rechazar transferencias',
+                  icon: Icons.payments_rounded,
+                  color: const Color(0xFF00A86B),
+                  page: const AdminPedidosPage(),
+                  tag: 'Contabilidad',
                 ),
               ]
-            : [];
+            : esDespacho
+                ? [
+                    _AdminOption(
+                      title: 'Despacho',
+                      subtitle: 'Pedidos aprobados por contabilidad',
+                      icon: Icons.local_shipping_rounded,
+                      color: const Color(0xFF00ACC1),
+                      page: const DespachoPage(),
+                      tag: 'Operación',
+                    ),
+                    _AdminOption(
+                      title: 'Historial',
+                      subtitle: 'Registro de despachos',
+                      icon: Icons.history_rounded,
+                      color: const Color(0xFF3949AB),
+                      page: const HistorialDespachoPage(),
+                      tag: 'Archivo',
+                    ),
+                  ]
+                : [];
 
     final String roleLabel = esAdministrador
         ? 'Administrador Total'
-        : esDespacho
-            ? 'Encargado de Despacho'
-            : 'Usuario sin rol administrativo';
+        : esContabilidad
+            ? 'Administración Contable'
+            : esDespacho
+                ? 'Encargado de Despacho'
+                : 'Usuario sin rol administrativo';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FB),
@@ -151,7 +171,6 @@ class AdministradorPage extends StatelessWidget {
                         ),
                       ),
                     ),
-
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
@@ -160,10 +179,10 @@ class AdministradorPage extends StatelessWidget {
                           roleLabel: roleLabel,
                           esAdministrador: esAdministrador,
                           esDespacho: esDespacho,
+                          esContabilidad: esContabilidad,
                         ),
                       ),
                     ),
-
                     if (esAdministrador)
                       SliverToBoxAdapter(
                         child: Padding(
@@ -173,25 +192,26 @@ class AdministradorPage extends StatelessWidget {
                           ),
                         ),
                       ),
-
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: _SectionHeader(
                           title: esDespacho
                               ? 'Centro de despacho'
-                              : 'Centro de administración',
+                              : esContabilidad
+                                  ? 'Centro contable'
+                                  : 'Centro de administración',
                           subtitle: esDespacho
                               ? 'Accesos habilitados para gestión operativa.'
-                              : 'Accesos principales del sistema Spazio.',
+                              : esContabilidad
+                                  ? 'Revisión, aprobación y rechazo de pagos.'
+                                  : 'Accesos principales del sistema Spazio.',
                         ),
                       ),
                     ),
-
                     const SliverToBoxAdapter(
                       child: SizedBox(height: 14),
                     ),
-
                     options.isEmpty
                         ? SliverFillRemaining(
                             hasScrollBody: false,
@@ -337,27 +357,33 @@ class _DashboardHero extends StatelessWidget {
   final String roleLabel;
   final bool esAdministrador;
   final bool esDespacho;
+  final bool esContabilidad;
 
   const _DashboardHero({
     required this.adminName,
     required this.roleLabel,
     required this.esAdministrador,
     required this.esDespacho,
+    required this.esContabilidad,
   });
 
   @override
   Widget build(BuildContext context) {
     final Color roleColor = esAdministrador
         ? const Color(0xFFE91E63)
-        : esDespacho
-            ? const Color(0xFF00ACC1)
-            : Colors.grey;
+        : esContabilidad
+            ? const Color(0xFF00A86B)
+            : esDespacho
+                ? const Color(0xFF00ACC1)
+                : Colors.grey;
 
     final IconData roleIcon = esAdministrador
         ? Icons.admin_panel_settings_rounded
-        : esDespacho
-            ? Icons.local_shipping_rounded
-            : Icons.person_off_rounded;
+        : esContabilidad
+            ? Icons.payments_rounded
+            : esDespacho
+                ? Icons.local_shipping_rounded
+                : Icons.person_off_rounded;
 
     return Container(
       width: double.infinity,
@@ -891,21 +917,10 @@ class AdminPedidosPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const _AdminBasePage(
         title: 'Pedidos',
-        message: 'Visualiza y procesa los pedidos realizados.',
+        message:
+            'Módulo de revisión contable. Aquí se conectará la pantalla para aprobar o rechazar transferencias.',
         icon: Icons.shopping_cart_checkout_rounded,
         color: Color(0xFF00A86B),
-      );
-}
-
-class AdminPromocionesPage extends StatelessWidget {
-  const AdminPromocionesPage({super.key});
-
-  @override
-  Widget build(BuildContext context) => const _AdminBasePage(
-        title: 'Promociones',
-        message: 'Crea banners y novedades para el catálogo.',
-        icon: Icons.campaign_rounded,
-        color: Color(0xFFE91E63),
       );
 }
 

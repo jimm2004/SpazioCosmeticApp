@@ -2,6 +2,8 @@ import '../models/catalogo/carrito_model.dart';
 import '../models/catalogo/datos_cliente_model.dart';
 import '../models/catalogo/metodo_pago_model.dart';
 import '../models/catalogo/novedad_publica_model.dart';
+import '../models/catalogo/pedido_model.dart';
+import '../models/catalogo/perfil_usuario_model.dart';
 import '../models/catalogo/producto_catalogo_model.dart';
 import '../models/catalogo/tarifa_envio_model.dart';
 import '../models/catalogo/ubicacion_model.dart';
@@ -10,96 +12,96 @@ import 'api_service.dart';
 class CatalogoService {
   final ApiService _api = ApiService();
 
-  Future<List<ProductoCatalogo>> obtenerProductos() async {
-    final response = await _api.get('/api/catalogo/productos');
-    return _parseList(response).map((item) => ProductoCatalogo.fromJson(item)).toList();
+  /* --------------------------------------------------------------------------
+   * PERFIL
+   * -------------------------------------------------------------------------- */
+
+  Future<PerfilUsuarioModel> obtenerMiPerfil() async {
+    final response = await _api.get('/api/me');
+    return PerfilUsuarioModel.fromJson(_asMap(response));
+  }
+
+  /* --------------------------------------------------------------------------
+   * CATÁLOGO
+   * -------------------------------------------------------------------------- */
+
+  Future<List<ProductoCatalogo>> obtenerProductos({String buscar = '', int limite = 200, int? categoriaId}) async {
+    final query = <String, dynamic>{'limite': limite};
+    if (buscar.trim().isNotEmpty) query['buscar'] = buscar.trim();
+    if (categoriaId != null && categoriaId > 0) query['id_categoria'] = categoriaId;
+    final response = await _api.get(_withQuery('/api/catalogo/productos', query));
+    return _parseList(response).map(ProductoCatalogo.fromJson).toList();
   }
 
   Future<List<ProductoCatalogo>> buscarProductos(String nombre) async {
-    final response = await _api.get('/api/catalogo/buscar/${Uri.encodeComponent(nombre)}');
-    return _parseList(response).map((item) => ProductoCatalogo.fromJson(item)).toList();
+    final text = nombre.trim();
+    if (text.isEmpty) return obtenerProductos();
+    final response = await _api.get('/api/catalogo/buscar/${Uri.encodeComponent(text)}');
+    return _parseList(response).map(ProductoCatalogo.fromJson).toList();
+  }
+
+
+  Future<List<Map<String, dynamic>>> obtenerCategoriasCatalogo() async {
+    final response = await _api.get('/api/catalogo/categorias');
+    return _parseList(response);
   }
 
   Future<List<NovedadPublicaModel>> obtenerNovedades() async {
     final response = await _api.get('/api/catalogo/novedades');
-    return _parseList(response).map((item) => NovedadPublicaModel.fromJson(item)).toList();
+    return _parseList(response).map(NovedadPublicaModel.fromJson).toList();
   }
 
-  Future<List<MetodoPagoModel>> obtenerMetodosPago() async {
-    final response = await _api.get('/api/catalogo/metodos-pago');
-    return _parseList(response).map((item) => MetodoPagoModel.fromJson(item)).toList();
-  }
+  /* --------------------------------------------------------------------------
+   * UBICACIÓN / ZONA / ENVÍO
+   * -------------------------------------------------------------------------- */
 
-  Future<List<TarifaEnvioModel>> obtenerTarifasEnvio() async {
-    final response = await _api.get('/api/catalogo/tarifas-envio');
-    return _parseList(response).map((item) => TarifaEnvioModel.fromJson(item)).toList();
-  }
-
-  Future<List<TarifaEnvioModel>> obtenerEnvios() async {
-    return obtenerTarifasEnvio();
+  Future<List<ZonaModel>> obtenerZonas() async {
+    final response = await _api.get('/api/catalogo/zonas');
+    return _parseList(response).map(ZonaModel.fromJson).toList();
   }
 
   Future<List<DepartamentoModel>> obtenerDepartamentos() async {
     final response = await _api.get('/api/catalogo/departamentos');
-    return _parseList(response).map((item) => DepartamentoModel.fromJson(item)).toList();
+    return _parseList(response).map(DepartamentoModel.fromJson).toList();
+  }
+
+  Future<List<DepartamentoModel>> obtenerDepartamentosPorZona(int zonaId) async {
+    final response = await _api.get('/api/catalogo/zonas/$zonaId/departamentos');
+    return _parseList(response).map(DepartamentoModel.fromJson).toList();
   }
 
   Future<List<MunicipioModel>> obtenerMunicipios(int departamentoId) async {
-    final response = await _api.get('/api/catalogo/municipios/$departamentoId');
-    return _parseList(response).map((item) => MunicipioModel.fromJson(item)).toList();
+    final response = await _api.get('/api/catalogo/departamentos/$departamentoId/municipios');
+    return _parseList(response).map(MunicipioModel.fromJson).toList();
+  }
+
+  Future<List<MetodoPagoModel>> obtenerMetodosPago() async {
+    final response = await _api.get('/api/catalogo/metodos-pago');
+    return _parseList(response).map(MetodoPagoModel.fromJson).toList();
+  }
+
+  Future<List<TarifaEnvioModel>> obtenerTarifasEnvio() async {
+    final response = await _api.get('/api/catalogo/tarifas-envio');
+    return _parseList(response).map(TarifaEnvioModel.fromJson).toList();
   }
 
   Future<Map<String, dynamic>> previewCostoEnvio({
     required double subtotal,
-    int? departamentoId,
-    int? municipioId,
+    required int departamentoId,
   }) async {
     final response = await _api.post(
       '/api/catalogo/preview-envio',
       body: {
         'subtotal': subtotal,
         'departamento_id': departamentoId,
-        'municipio_id': municipioId,
       },
     );
     return _parseData(response);
   }
 
-  Future<CarritoModel> verCarrito() async {
-    final response = await _api.get('/api/carrito');
-    return CarritoModel.fromJson(Map<String, dynamic>.from(response));
-  }
-
-  Future<CarritoModel> agregarAlCarrito({
-    required int productoMasterId,
-    int? productoImagenId,
-    required int cantidad,
-  }) async {
-    final response = await _api.post(
-      '/api/carrito/agregar',
-      body: {
-        'producto_master_id': productoMasterId,
-        'producto_imagen_id': productoImagenId,
-        'cantidad': cantidad,
-      },
-    );
-    return CarritoModel.fromJson(Map<String, dynamic>.from(response));
-  }
-
-  Future<CarritoModel> editarItemCarrito({required int detalleId, required int cantidad}) async {
-    final response = await _api.put('/api/carrito/items/$detalleId', body: {'cantidad': cantidad});
-    return CarritoModel.fromJson(Map<String, dynamic>.from(response));
-  }
-
-  Future<CarritoModel> quitarItemCarrito(int detalleId) async {
-    final response = await _api.delete('/api/carrito/items/$detalleId');
-    return CarritoModel.fromJson(Map<String, dynamic>.from(response));
-  }
-
-  Future<CarritoModel> vaciarCarrito() async {
-    final response = await _api.delete('/api/carrito/vaciar');
-    return CarritoModel.fromJson(Map<String, dynamic>.from(response));
-  }
+  /* --------------------------------------------------------------------------
+   * DATOS DEL CLIENTE / MI PERFIL
+   * -------------------------------------------------------------------------- */
 
   Future<DatosClienteModel?> obtenerDatosCliente() async {
     final response = await _api.get('/api/cliente/datos');
@@ -118,37 +120,120 @@ class CatalogoService {
     return DatosClienteModel.fromJson(_parseData(response));
   }
 
-  Future<Map<String, dynamic>> realizarPedido({
+  /* --------------------------------------------------------------------------
+   * CARRITO
+   * -------------------------------------------------------------------------- */
+
+  Future<CarritoModel> verCarrito() async {
+    final response = await _api.get('/api/carrito');
+    return CarritoModel.fromJson(_asMap(response));
+  }
+
+  Future<CarritoModel> agregarAlCarrito({
+    required int productoMasterId,
+    int? productoImagenId,
+    required int cantidad,
+  }) async {
+    final response = await _api.post(
+      '/api/carrito/agregar',
+      body: {
+        'producto_master_id': productoMasterId,
+        'producto_imagen_id': productoImagenId,
+        'cantidad': cantidad,
+      },
+    );
+    return CarritoModel.fromJson(_asMap(response));
+  }
+
+  Future<CarritoModel> editarItemCarrito({required int detalleId, required int cantidad}) async {
+    final response = await _api.put('/api/carrito/items/$detalleId', body: {'cantidad': cantidad});
+    return CarritoModel.fromJson(_asMap(response));
+  }
+
+  Future<CarritoModel> quitarItemCarrito(int detalleId) async {
+    final response = await _api.delete('/api/carrito/items/$detalleId');
+    return CarritoModel.fromJson(_asMap(response));
+  }
+
+  Future<CarritoModel> vaciarCarrito() async {
+    final response = await _api.delete('/api/carrito/vaciar');
+    return CarritoModel.fromJson(_asMap(response));
+  }
+
+  /* --------------------------------------------------------------------------
+   * PEDIDOS
+   * -------------------------------------------------------------------------- */
+
+  Future<PedidoModel> realizarPedido({
     required int metodoPagoId,
     required String referenciaTransferencia,
     String observacion = '',
-    int? envioId,
   }) async {
     final response = await _api.post(
       '/api/pedidos/realizar',
       body: {
-        'envio_id': envioId,
         'metodo_pago_id': metodoPagoId,
-        'referencia_transferencia': referenciaTransferencia,
-        'observacion': observacion,
-        'tipo_pago': 'transferencia',
+        'referencia_transferencia': referenciaTransferencia.trim(),
+        'observacion': observacion.trim(),
       },
     );
-    return Map<String, dynamic>.from(response);
+    return PedidoModel.fromJson(_parseData(response));
   }
 
-  Future<List<Map<String, dynamic>>> listarPedidos() async {
+  Future<List<PedidoModel>> listarPedidos() async {
     final response = await _api.get('/api/pedidos');
-    return _parseList(response);
+    return _parseList(response).map(PedidoModel.fromJson).toList();
+  }
+
+  Future<PedidoModel> verPedido(int id) async {
+    final response = await _api.get('/api/pedidos/$id');
+    return PedidoModel.fromJson(_parseData(response));
+  }
+
+  Future<List<PedidoHistorialModel>> historialPedido(int id) async {
+    final response = await _api.get('/api/pedidos/$id/historial');
+    return _parseList(response).map(PedidoHistorialModel.fromJson).toList();
+  }
+
+  Future<PedidoModel> corregirReferenciaTransferencia({
+    required int pedidoId,
+    required String referenciaTransferencia,
+    String observacion = '',
+  }) async {
+    final response = await _api.put(
+      '/api/pedidos/$pedidoId/corregir-referencia',
+      body: {
+        'referencia_transferencia': referenciaTransferencia.trim(),
+        'observacion': observacion.trim(),
+      },
+    );
+    return PedidoModel.fromJson(_parseData(response));
+  }
+
+  /* --------------------------------------------------------------------------
+   * HELPERS
+   * -------------------------------------------------------------------------- */
+
+  String _withQuery(String path, Map<String, dynamic> query) {
+    final filtered = <String, String>{};
+    query.forEach((key, value) {
+      if (value != null && value.toString().trim().isNotEmpty) {
+        filtered[key] = value.toString();
+      }
+    });
+    if (filtered.isEmpty) return path;
+    return Uri(path: path, queryParameters: filtered).toString();
+  }
+
+  Map<String, dynamic> _asMap(dynamic response) {
+    if (response is Map) return Map<String, dynamic>.from(response);
+    return <String, dynamic>{};
   }
 
   Map<String, dynamic> _parseData(dynamic response) {
-    if (response is Map) {
-      final map = Map<String, dynamic>.from(response);
-      if (map['data'] is Map) return Map<String, dynamic>.from(map['data']);
-      return map;
-    }
-    return <String, dynamic>{};
+    final map = _asMap(response);
+    if (map['data'] is Map) return Map<String, dynamic>.from(map['data']);
+    return map;
   }
 
   Map<String, dynamic>? _parseNullableData(dynamic response) {
