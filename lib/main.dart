@@ -1,28 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
+import 'pages/auth/auth_page.dart';
 
-import 'pages/auth/app_session_gate.dart';
-import 'services/api_service.dart';
-
-class AppConfig {
-  static const String _puertoFijo = '55474';
-
-  static String get baseUrl {
-    if (kIsWeb) {
-      final String hostActual = Uri.base.host;
-      return 'http://$hostActual:$_puertoFijo';
-    }
-
-    return 'http://10.0.2.2:$_puertoFijo';
-  }
-}
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  await ApiService().init();
-
+void main() {
   runApp(const SpazioCosmeticApp());
 }
 
@@ -34,15 +13,6 @@ class SpazioCosmeticApp extends StatelessWidget {
     return MaterialApp(
       title: 'Spazio Cosmetic | Nicaragua',
       debugShowCheckedModeBanner: false,
-
-      scrollBehavior: const MaterialScrollBehavior().copyWith(
-        dragDevices: {
-          PointerDeviceKind.mouse,
-          PointerDeviceKind.touch,
-          PointerDeviceKind.trackpad,
-          PointerDeviceKind.stylus,
-        },
-      ),
 
       theme: ThemeData(
         useMaterial3: true,
@@ -101,7 +71,7 @@ class SpazioCosmeticApp extends StatelessWidget {
         ),
       ),
 
-      home: const AppSessionGate(),
+      home: const AuthHomePage(),
     );
   }
 }
