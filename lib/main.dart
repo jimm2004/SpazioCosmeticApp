@@ -1,25 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // ✅ Necesario para saber si estamos en Web (kIsWeb)
-import 'package:flutter/gestures.dart';   // ✅ Necesario para permitir el scroll con mouse
 import 'pages/auth/auth_page.dart';
-
-// ✅ CLASE DE CONFIGURACIÓN DINÁMICA
-class AppConfig {
-  static const String _puertoFijo = "55474"; // El puerto que no cambia nunca
-
-  // Ahora baseUrl es "dinámico" (un getter)
-  static String get baseUrl {
-    if (kIsWeb) {
-      // Si la app está corriendo en Web, toma la IP que aparece en el navegador
-      final String hostActual = Uri.base.host;
-      return "http://$hostActual:$_puertoFijo";
-    } else {
-      // Si llegas a correr la app nativa en un Emulador de Android
-      // 10.0.2.2 es el alias que usa Android para "localhost"
-      return "http://10.0.2.2:$_puertoFijo"; 
-    }
-  }
-}
 
 void main() {
   runApp(const SpazioCosmeticApp());
@@ -33,11 +13,6 @@ class SpazioCosmeticApp extends StatelessWidget {
     return MaterialApp(
       title: 'Spazio Cosmetic | Nicaragua',
       debugShowCheckedModeBanner: false,
-
-      // ✅ ESTO PERMITE QUE PUEDAS DAR CLIC Y ARRASTRAR PARA BAJAR/SUBIR (SCROLL)
-      scrollBehavior: const MaterialScrollBehavior().copyWith(
-        dragDevices: {PointerDeviceKind.mouse, PointerDeviceKind.touch},
-      ),
 
       theme: ThemeData(
         useMaterial3: true,

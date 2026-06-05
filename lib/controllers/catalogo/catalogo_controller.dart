@@ -1,73 +1,70 @@
-import 'package:flutter/foundation.dart';
-
-import '../../models/catalogo/novedad_publica_model.dart';
-import '../../models/catalogo/producto_catalogo_model.dart';
+import '../../models/producto_catalogo_model.dart';
 import '../../services/catalogo_service.dart';
 
-class CatalogoController extends ChangeNotifier {
+class CatalogoController {
   final CatalogoService _service = CatalogoService();
 
-  List<ProductoCatalogo> productos = [];
-  List<NovedadPublicaModel> novedades = [];
-  bool loading = false;
-  String? error;
+  Future<List<ProductoCatalogoModel>> listarProductos() async {
+    final data = await _service.listarProductos();
 
-  Future<void> cargarInicio() async {
-    loading = true;
-    error = null;
-    notifyListeners();
-    try {
-      final result = await Future.wait([
-        _service.obtenerProductos(),
-        _service.obtenerNovedades(),
-      ]);
-      productos = result[0] as List<ProductoCatalogo>;
-      novedades = result[1] as List<NovedadPublicaModel>;
-    } catch (e) {
-      error = _cleanError(e);
-    } finally {
-      loading = false;
-      notifyListeners();
-    }
+    return data
+        .where((e) => e is Map)
+        .map<ProductoCatalogoModel>(
+          (e) => ProductoCatalogoModel.fromJson(
+            Map<String, dynamic>.from(e as Map),
+          ),
+        )
+        .where((producto) => producto.activo && producto.tieneImagen)
+        .toList();
   }
 
-  Future<void> buscar(String query) async {
-    loading = true;
-    error = null;
-    notifyListeners();
-    try {
-      productos = query.trim().isEmpty
-          ? await _service.obtenerProductos()
-          : await _service.buscarProductos(query.trim());
-    } catch (e) {
-      error = _cleanError(e);
-    } finally {
-      loading = false;
-      notifyListeners();
+  Future<ProductoCatalogoModel> obtenerProducto(int idProducto) async {
+    if (idProducto <= 0) {
+      throw Exception('ID de producto inválido.');
     }
+
+    final data = await _service.obtenerProducto(idProducto);
+
+    return ProductoCatalogoModel.fromJson(data);
   }
 
-  List<String> get categorias {
-    final set = <String>{'Todos'};
-    for (final p in productos) {
-      if (p.categoriaNombre.trim().isNotEmpty) set.add(p.categoriaNombre);
+  Future<List<ProductoCatalogoModel>> buscarProductosPorNombre(String nombre) async {
+    final texto = nombre.trim();
+
+    if (texto.isEmpty) {
+      return listarProductos();
     }
-    return set.toList();
+
+    final data = await _service.buscarProductosPorNombre(texto);
+
+    return data
+        .where((e) => e is Map)
+        .map<ProductoCatalogoModel>(
+          (e) => ProductoCatalogoModel.fromJson(
+            Map<String, dynamic>.from(e as Map),
+          ),
+        )
+        .where((producto) => producto.activo && producto.tieneImagen)
+        .toList();
   }
 
-  Map<String, List<ProductoCatalogo>> productosPorCategoria(String filtro) {
-    final source = filtro == 'Todos'
-        ? productos
-        : productos.where((p) => p.categoriaNombre.toLowerCase() == filtro.toLowerCase()).toList();
+  Future<List<Map<String, dynamic>>> listarProductosParaGrid() async {
+    final productos = await listarProductos();
 
-    final map = <String, List<ProductoCatalogo>>{};
-    for (final p in source) {
-      if (p.imagenPrincipal.isEmpty) continue;
-      map.putIfAbsent(p.categoriaNombre, () => []);
-      map[p.categoriaNombre]!.add(p);
-    }
-    return map;
+    productos.sort(
+      (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()),
+    );
+
+    return productos.map((p) => p.toProductCardMap()).toList();
   }
 
-  String _cleanError(Object e) => e.toString().replaceFirst('Exception: ', '');
+  Future<List<Map<String, dynamic>>> buscarProductosParaGrid(String nombre) async {
+    final productos = await buscarProductosPorNombre(nombre);
+
+    productos.sort(
+      (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()),
+    );
+
+    return productos.map((p) => p.toProductCardMap()).toList();
+  }
 }
