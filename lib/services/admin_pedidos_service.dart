@@ -70,6 +70,14 @@ class AdminPedidosService {
     return _message(json, 'Pedido despachado correctamente. Se notificó al cliente por correo.');
   }
 
+  /// Esta es acción administrativa:
+  /// limpia el rechazo y devuelve el pedido a pendiente_revision.
+  /// No borra el pedido ni devuelve stock. Para el cliente usá cancelarPedidoRechazado en CatalogoService.
+  Future<String> limpiarRechazoPedido(int pedidoId) async {
+    final json = await api.post('/admin/pedidos/$pedidoId/limpiar-rechazo');
+    return _message(json, 'Pedido limpiado. Volvió a pendiente de revisión.');
+  }
+
   Future<AdminPedidosResponse> listarPendientesContabilidad({
     String? buscar,
     String? banco,

@@ -1,30 +1,40 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:store_mood_app/main.dart';
+import 'helpers/test_data.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const SpazioCosmeticApp());
+  group('Estructura general de tests y lib', () {
+    test('el proyecto tiene pubspec.yaml y carpeta lib', () {
+      final root = TestData.projectRoot();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      expect(root.path, isNotEmpty);
+      expect(TestData.libRoot().existsSync(), isTrue);
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('existe al menos un archivo Dart dentro de lib', () {
+      expect(TestData.allDartFiles(), isNotEmpty);
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('los archivos Dart encontrados no tienen conflictos Git reales', () {
+      final files = TestData.allDartFiles();
+
+      for (final file in files) {
+        final source = file.readAsStringSync();
+        expect(
+          TestData.hasRealMergeConflictMarkers(source),
+          isFalse,
+          reason: 'Hay conflicto Git real en ${file.path}',
+        );
+      }
+    });
+
+    test('los fixtures mínimos de prueba están configurados', () {
+      expect(TestData.testEmail, contains('@'));
+      expect(TestData.testPassword.length, greaterThanOrEqualTo(6));
+      expect(TestData.testToken, isNotEmpty);
+      expect(TestData.productoJson['precio'], greaterThan(0));
+      expect(TestData.carritoJson['subtotal'], greaterThan(0));
+      expect(TestData.pedidoJson['total'], greaterThan(0));
+    });
   });
 }

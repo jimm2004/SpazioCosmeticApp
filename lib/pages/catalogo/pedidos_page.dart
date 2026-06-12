@@ -45,6 +45,65 @@ class _PedidosPageState extends State<PedidosPage> {
     );
   }
 
+  Future<void> _cancelarPedido(PedidoModel pedido) async {
+    if (!pedido.puedeCorregirReferencia) return;
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Cancelar pedido',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Se eliminará el pedido ${pedido.codigoPedido.isEmpty ? '#${pedido.id}' : pedido.codigoPedido}, '
+          'se borrarán sus registros y se regresará el stock al inventario. ¿Querés continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.delete_forever_rounded),
+            label: const Text('Sí, cancelar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    final ok = await controller.cancelarPedidoRechazado(pedidoId: pedido.id);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok
+              ? 'Pedido cancelado. Se restauró el stock correctamente.'
+              : controller.error ?? 'No se pudo cancelar el pedido.',
+        ),
+        backgroundColor: ok ? Colors.green : Colors.redAccent,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,7 +139,13 @@ class _PedidosPageState extends State<PedidosPage> {
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (_, index) {
                         final pedido = controller.pedidos[index];
-                        return _PedidoCard(pedido: pedido, onTap: () => _abrirDetalle(pedido));
+                        return _PedidoCard(
+                          pedido: pedido,
+                          onTap: () => _abrirDetalle(pedido),
+                          onCancelar: pedido.puedeCorregirReferencia
+                              ? () => _cancelarPedido(pedido)
+                              : null,
+                        );
                       },
                     ),
             ),
@@ -91,7 +156,13 @@ class _PedidosPageState extends State<PedidosPage> {
 class _PedidoCard extends StatelessWidget {
   final PedidoModel pedido;
   final VoidCallback onTap;
-  const _PedidoCard({required this.pedido, required this.onTap});
+  final VoidCallback? onCancelar;
+
+  const _PedidoCard({
+    required this.pedido,
+    required this.onTap,
+    required this.onCancelar,
+  });
 
   Color get _estadoColor {
     final pago = pedido.estadoPago.toLowerCase();
@@ -128,7 +199,26 @@ class _PedidoCard extends StatelessWidget {
           ]),
           if (pedido.puedeCorregirReferencia) ...[
             const SizedBox(height: 8),
-            const Text('Requiere corrección de referencia', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w800)),
+            const Text(
+              'Requiere corrección de referencia',
+              style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: onCancelar,
+                icon: const Icon(Icons.delete_forever_rounded),
+                label: const Text('Cancelar pedido'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: const BorderSide(color: Colors.redAccent),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
           ],
         ]),
       ),
@@ -176,6 +266,68 @@ class _PedidoDetalleSheetState extends State<_PedidoDetalleSheet> {
     );
     if (ok && widget.controller.seleccionado != null) {
       setState(() => pedido = widget.controller.seleccionado!);
+    }
+  }
+
+  Future<void> _cancelarPedidoRechazado() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Cancelar pedido rechazado',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Se eliminará este pedido, sus datos de pago y sus detalles. '
+          'También se regresará al inventario la cantidad de productos reservada. '
+          'Esta acción no se puede deshacer. ¿Continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.delete_forever_rounded),
+            label: const Text('Sí, cancelar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    final ok = await widget.controller.cancelarPedidoRechazado(pedidoId: pedido.id);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok
+              ? 'Pedido cancelado. Stock restaurado correctamente.'
+              : widget.controller.error ?? 'No se pudo cancelar el pedido.',
+        ),
+        backgroundColor: ok ? Colors.green : Colors.redAccent,
+      ),
+    );
+
+    if (ok) {
+      Navigator.pop(context);
     }
   }
 
@@ -233,6 +385,16 @@ class _PedidoDetalleSheetState extends State<_PedidoDetalleSheet> {
                   icon: const Icon(Icons.send_rounded),
                   label: Text(widget.controller.saving ? 'Enviando...' : 'Enviar corrección'),
                   style: ElevatedButton.styleFrom(backgroundColor: MoodPalette.pink, foregroundColor: Colors.white),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: widget.controller.saving ? null : _cancelarPedidoRechazado,
+                  icon: const Icon(Icons.delete_forever_rounded),
+                  label: const Text('Cancelar pedido y devolver stock'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent),
+                  ),
                 ),
               ]),
             ],

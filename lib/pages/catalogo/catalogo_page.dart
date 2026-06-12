@@ -8,14 +8,17 @@ import '../../models/catalogo/datos_cliente_model.dart';
 import '../../models/catalogo/producto_catalogo_model.dart';
 import '../auth/auth_page.dart';
 import 'cart_page.dart';
-import 'pedidos_page.dart';
 import 'mood_palette.dart';
+import 'pedidos_page.dart';
 import 'widgets/web_safe_network_image.dart';
 
 class CatalogoPage extends StatefulWidget {
   final String userName;
 
-  const CatalogoPage({super.key, required this.userName});
+  const CatalogoPage({
+    super.key,
+    required this.userName,
+  });
 
   @override
   State<CatalogoPage> createState() => _CatalogoPageState();
@@ -61,7 +64,9 @@ class _CatalogoPageState extends State<CatalogoPage> {
     try {
       await _auth.logout();
     } catch (_) {}
+
     if (!mounted) return;
+
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const AuthHomePage()),
@@ -75,16 +80,25 @@ class _CatalogoPageState extends State<CatalogoPage> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _MyAccountSheet(userName: widget.userName, onLogout: _logout),
+      builder: (_) => _MyAccountSheet(
+        userName: widget.userName,
+        onLogout: _logout,
+      ),
     );
   }
 
   void _abrirCarrito() {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const CartPage()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CartPage()),
+    );
   }
 
   void _abrirPedidos() {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const PedidosPage()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PedidosPage()),
+    );
   }
 
   void _abrirDetalle(ProductoCatalogo producto) {
@@ -93,13 +107,40 @@ class _CatalogoPageState extends State<CatalogoPage> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _ProductDetailSheet(producto: producto, onOpenCart: _abrirCarrito),
+      builder: (_) => _ProductDetailSheet(
+        producto: producto,
+        onOpenCart: _abrirCarrito,
+      ),
     );
   }
 
   Future<void> _buscar() async {
     await _catalogo.buscar(_buscarCtrl.text.trim());
-    setState(() => _categoria = 'Todos');
+    if (mounted) setState(() => _categoria = 'Todos');
+  }
+
+  List<Widget> _buildCategorySlivers(
+    Map<String, List<ProductoCatalogo>> grupos,
+  ) {
+    return grupos.entries.expand<Widget>((entry) {
+      return [
+        SliverToBoxAdapter(
+          child: _ResponsiveShell(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
+              child: _CategoryTitleHeader(
+                title: entry.key,
+                total: entry.value.length,
+              ),
+            ),
+          ),
+        ),
+        _ProductSliverGrid(
+          productos: entry.value,
+          onTap: _abrirDetalle,
+        ),
+      ];
+    }).toList(growable: false);
   }
 
   @override
@@ -115,7 +156,7 @@ class _CatalogoPageState extends State<CatalogoPage> {
           onRefresh: _refresh,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            cacheExtent: 160,
+            cacheExtent: 120,
             slivers: [
               SliverToBoxAdapter(
                 child: _MoodHeader(
@@ -137,16 +178,25 @@ class _CatalogoPageState extends State<CatalogoPage> {
               if (_catalogo.loading)
                 const SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(child: CircularProgressIndicator(color: MoodPalette.pink)),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: MoodPalette.pink,
+                    ),
+                  ),
                 )
               else if (_catalogo.error != null)
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: _ErrorState(message: _catalogo.error!, onRetry: _refresh),
+                  child: _ErrorState(
+                    message: _catalogo.error!,
+                    onRetry: _refresh,
+                  ),
                 )
               else ...[
                 SliverToBoxAdapter(
-                  child: _NovedadesCarousel(novedades: _catalogo.novedades),
+                  child: _NovedadesCarousel(
+                    novedades: _catalogo.novedades,
+                  ),
                 ),
                 SliverToBoxAdapter(
                   child: _ResponsiveShell(
@@ -159,17 +209,12 @@ class _CatalogoPageState extends State<CatalogoPage> {
                 if (grupos.isEmpty)
                   const SliverFillRemaining(
                     hasScrollBody: false,
-                    child: Center(child: Text('No hay productos para mostrar.')),
-                  ),
-                ...grupos.entries.map(
-                  (entry) => SliverToBoxAdapter(
-                    child: _CategorySection(
-                      title: entry.key,
-                      productos: entry.value,
-                      onTap: _abrirDetalle,
+                    child: Center(
+                      child: Text('No hay productos para mostrar.'),
                     ),
-                  ),
-                ),
+                  )
+                else
+                  ..._buildCategorySlivers(grupos),
                 const SliverToBoxAdapter(child: SizedBox(height: 110)),
               ],
             ],
@@ -179,7 +224,6 @@ class _CatalogoPageState extends State<CatalogoPage> {
     );
   }
 }
-
 
 class _ResponsiveShell extends StatelessWidget {
   final Widget child;
@@ -198,7 +242,10 @@ class _ResponsiveShell extends StatelessWidget {
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
-        child: Padding(padding: padding, child: child),
+        child: Padding(
+          padding: padding,
+          child: child,
+        ),
       ),
     );
   }
@@ -207,7 +254,9 @@ class _ResponsiveShell extends StatelessWidget {
 class _CatalogSectionHeader extends StatelessWidget {
   final VoidCallback onRefresh;
 
-  const _CatalogSectionHeader({required this.onRefresh});
+  const _CatalogSectionHeader({
+    required this.onRefresh,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -227,10 +276,14 @@ class _CatalogSectionHeader extends StatelessWidget {
         const SizedBox(height: 7),
         const Text(
           'Catálogo visual, cards amplias y compra rápida en cualquier pantalla.',
-          style: TextStyle(color: MoodPalette.muted, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: MoodPalette.muted,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ],
     );
+
     final refreshButton = TextButton.icon(
       onPressed: onRefresh,
       icon: const Icon(Icons.refresh_rounded, size: 18),
@@ -277,14 +330,27 @@ class _SectionEyebrow extends StatelessWidget {
       decoration: BoxDecoration(
         color: MoodPalette.softPink,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: MoodPalette.pink.withValues(alpha: .12)),
+        border: Border.all(
+          color: MoodPalette.pink.withValues(alpha: .12),
+        ),
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.auto_awesome_rounded, color: MoodPalette.pink, size: 17),
+          Icon(
+            Icons.auto_awesome_rounded,
+            color: MoodPalette.pink,
+            size: 17,
+          ),
           SizedBox(width: 7),
-          Text('Marketplace Mood', style: TextStyle(color: MoodPalette.pink, fontWeight: FontWeight.w900, fontSize: 12)),
+          Text(
+            'Marketplace Mood',
+            style: TextStyle(
+              color: MoodPalette.pink,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
@@ -334,7 +400,10 @@ class _MoodHeader extends StatelessWidget {
             child: Container(
               width: 230,
               height: 230,
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: .08), shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .08),
+                shape: BoxShape.circle,
+              ),
             ),
           ),
           Positioned(
@@ -343,11 +412,19 @@ class _MoodHeader extends StatelessWidget {
             child: Container(
               width: 210,
               height: 210,
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: .07), shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .07),
+                shape: BoxShape.circle,
+              ),
             ),
           ),
           _ResponsiveShell(
-            padding: EdgeInsets.fromLTRB(isWide ? 24 : 16, 14, isWide ? 24 : 16, 24),
+            padding: EdgeInsets.fromLTRB(
+              isWide ? 24 : 16,
+              14,
+              isWide ? 24 : 16,
+              24,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -364,7 +441,10 @@ class _MoodHeader extends StatelessWidget {
                       ),
                       child: Image.asset(
                         'assets/img/Logo.png',
-                        errorBuilder: (_, __, ___) => const Icon(Icons.storefront_rounded, color: MoodPalette.pink),
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.storefront_rounded,
+                          color: MoodPalette.pink,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -376,22 +456,38 @@ class _MoodHeader extends StatelessWidget {
                             'Hola, $userName',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
                           Text(
                             'Mood Professional',
-                            style: TextStyle(color: Colors.white.withValues(alpha: .78), fontSize: 12, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: .78),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ],
                       ),
                     ),
                     if (isWide) ...[
-                      _HeaderNavChip(icon: Icons.dashboard_customize_rounded, label: 'Catálogo'),
+                      const _HeaderNavChip(
+                        icon: Icons.dashboard_customize_rounded,
+                        label: 'Catálogo',
+                      ),
                       const SizedBox(width: 8),
-                      _HeaderNavChip(icon: Icons.local_fire_department_rounded, label: 'Novedades'),
+                      const _HeaderNavChip(
+                        icon: Icons.local_fire_department_rounded,
+                        label: 'Novedades',
+                      ),
                       const SizedBox(width: 12),
                     ],
-                    _HeaderIcon(icon: Icons.person_rounded, onTap: onAccount),
+                    _HeaderIcon(
+                      icon: Icons.person_rounded,
+                      onTap: onAccount,
+                    ),
                     const SizedBox(width: 8),
                     _PedidosHeaderButton(onTap: onPedidos),
                     const SizedBox(width: 8),
@@ -400,17 +496,27 @@ class _MoodHeader extends StatelessWidget {
                       builder: (_, __) => Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          _HeaderIcon(icon: Icons.shopping_bag_rounded, onTap: onCart),
+                          _HeaderIcon(
+                            icon: Icons.shopping_bag_rounded,
+                            onTap: onCart,
+                          ),
                           if (CartController.instance.totalItems > 0)
                             Positioned(
                               right: -2,
                               top: -3,
                               child: Container(
                                 padding: const EdgeInsets.all(5),
-                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
                                 child: Text(
                                   '${CartController.instance.totalItems}',
-                                  style: const TextStyle(color: MoodPalette.pink, fontSize: 10, fontWeight: FontWeight.w900),
+                                  style: const TextStyle(
+                                    color: MoodPalette.pink,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
                               ),
                             ),
@@ -426,18 +532,34 @@ class _MoodHeader extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: .14),
                             borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: Colors.white.withValues(alpha: .18)),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: .18),
+                            ),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.bolt_rounded, color: Colors.white, size: 17),
+                              Icon(
+                                Icons.bolt_rounded,
+                                color: Colors.white,
+                                size: 17,
+                              ),
                               SizedBox(width: 6),
-                              Text('Catálogo multiplataforma', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
+                              Text(
+                                'Catálogo multiplataforma',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -457,7 +579,11 @@ class _MoodHeader extends StatelessWidget {
                           'Productos profesionales, novedades flotantes y pedidos fluidos desde iOS, Web, móvil y escritorio.',
                           maxLines: isWide ? 2 : 3,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.white.withValues(alpha: .82), height: 1.45, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: .82),
+                            height: 1.45,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
                     );
@@ -469,7 +595,10 @@ class _MoodHeader extends StatelessWidget {
                       children: [
                         Expanded(flex: 6, child: heroCopy),
                         const SizedBox(width: 28),
-                        const Expanded(flex: 5, child: _StorePreviewStack()),
+                        const Expanded(
+                          flex: 5,
+                          child: _StorePreviewStack(),
+                        ),
                       ],
                     );
                   },
@@ -512,6 +641,7 @@ class _SearchPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.sizeOf(context).width >= 760;
+
     return Container(
       padding: EdgeInsets.all(isWide ? 12 : 10),
       decoration: BoxDecoration(
@@ -538,7 +668,10 @@ class _SearchPanel extends StatelessWidget {
                   ),
                 ),
               ),
-              IconButton(onPressed: onClear, icon: const Icon(Icons.close_rounded)),
+              IconButton(
+                onPressed: onClear,
+                icon: const Icon(Icons.close_rounded),
+              ),
               Container(
                 margin: const EdgeInsets.only(right: 3),
                 child: ElevatedButton.icon(
@@ -548,9 +681,14 @@ class _SearchPanel extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: MoodPalette.pink,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
                     elevation: 0,
-                    padding: EdgeInsets.symmetric(horizontal: isWide ? 18 : 12, vertical: 14),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isWide ? 18 : 12,
+                      vertical: 14,
+                    ),
                   ),
                 ),
               ),
@@ -567,15 +705,25 @@ class _SearchPanel extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final cat = categorias[index];
                   final selected = cat == categoriaSeleccionada;
+
                   return ChoiceChip(
                     label: Text(cat),
                     selected: selected,
                     onSelected: (_) => onCategoria(cat),
                     selectedColor: MoodPalette.pink,
                     backgroundColor: MoodPalette.softPink,
-                    labelStyle: TextStyle(color: selected ? Colors.white : MoodPalette.pink, fontWeight: FontWeight.w900),
-                    side: BorderSide(color: selected ? MoodPalette.pink : MoodPalette.pink.withValues(alpha: .12)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                    labelStyle: TextStyle(
+                      color: selected ? Colors.white : MoodPalette.pink,
+                      fontWeight: FontWeight.w900,
+                    ),
+                    side: BorderSide(
+                      color: selected
+                          ? MoodPalette.pink
+                          : MoodPalette.pink.withValues(alpha: .12),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                   );
                 },
               ),
@@ -591,7 +739,10 @@ class _HeaderNavChip extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _HeaderNavChip({required this.icon, required this.label});
+  const _HeaderNavChip({
+    required this.icon,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -607,8 +758,90 @@ class _HeaderNavChip extends StatelessWidget {
         children: [
           Icon(icon, color: Colors.white, size: 16),
           const SizedBox(width: 6),
-          Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _HeaderIcon extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _HeaderIcon({
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(15),
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .16),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.white.withValues(alpha: .20)),
+        ),
+        child: Icon(icon, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _PedidosHeaderButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _PedidosHeaderButton({
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Mis pedidos',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(15),
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .16),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.white.withValues(alpha: .20)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.receipt_long_rounded,
+                color: Colors.white,
+                size: 19,
+              ),
+              SizedBox(width: 6),
+              Text(
+                'Pedidos',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -691,7 +924,11 @@ class _MiniStorePanel extends StatelessWidget {
         height: height,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+          gradient: LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(26),
           boxShadow: [MoodPalette.cardShadow(.22)],
           border: Border.all(color: Colors.white.withValues(alpha: .6)),
@@ -701,9 +938,22 @@ class _MiniStorePanel extends StatelessWidget {
           children: [
             Icon(icon, color: MoodPalette.pink, size: 28),
             const Spacer(),
-            Text(title, style: const TextStyle(color: MoodPalette.text, fontWeight: FontWeight.w900, fontSize: 16)),
+            Text(
+              title,
+              style: const TextStyle(
+                color: MoodPalette.text,
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(subtitle, style: const TextStyle(color: MoodPalette.muted, fontWeight: FontWeight.w800)),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                color: MoodPalette.muted,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ],
         ),
       ),
@@ -725,15 +975,39 @@ class _MainStorePanel extends StatelessWidget {
         children: [
           Container(
             height: 28,
-            decoration: BoxDecoration(color: MoodPalette.black, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: MoodPalette.black,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Row(
               children: [
                 const SizedBox(width: 10),
-                Container(width: 7, height: 7, decoration: const BoxDecoration(color: MoodPalette.pink, shape: BoxShape.circle)),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: MoodPalette.pink,
+                    shape: BoxShape.circle,
+                  ),
+                ),
                 const SizedBox(width: 5),
-                Container(width: 7, height: 7, decoration: BoxDecoration(color: MoodPalette.hotPink.withValues(alpha: .5), shape: BoxShape.circle)),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: MoodPalette.hotPink.withValues(alpha: .5),
+                    shape: BoxShape.circle,
+                  ),
+                ),
                 const Spacer(),
-                Container(width: 72, height: 8, decoration: BoxDecoration(color: Colors.white.withValues(alpha: .18), borderRadius: BorderRadius.circular(99))),
+                Container(
+                  width: 72,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .18),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
                 const SizedBox(width: 10),
               ],
             ),
@@ -757,7 +1031,11 @@ class _MainStorePanel extends StatelessWidget {
                   Positioned(
                     right: 18,
                     bottom: 12,
-                    child: Icon(Icons.spa_rounded, color: MoodPalette.pink.withValues(alpha: .25), size: 118),
+                    child: Icon(
+                      Icons.spa_rounded,
+                      color: MoodPalette.pink.withValues(alpha: .25),
+                      size: 118,
+                    ),
                   ),
                   Positioned(
                     left: 18,
@@ -766,14 +1044,42 @@ class _MainStorePanel extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(width: 74, height: 8, decoration: BoxDecoration(color: MoodPalette.pink.withValues(alpha: .28), borderRadius: BorderRadius.circular(99))),
+                        Container(
+                          width: 74,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: MoodPalette.pink.withValues(alpha: .28),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
                         const SizedBox(height: 10),
-                        const Text('YA ES\nTEMPORADA', style: TextStyle(color: MoodPalette.text, height: .92, fontWeight: FontWeight.w900, fontSize: 25)),
+                        const Text(
+                          'YA ES\nTEMPORADA',
+                          style: TextStyle(
+                            color: MoodPalette.text,
+                            height: .92,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 25,
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(color: MoodPalette.pink, borderRadius: BorderRadius.circular(999)),
-                          child: const Text('Ver novedades', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: MoodPalette.pink,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: const Text(
+                            'Ver novedades',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -788,68 +1094,12 @@ class _MainStorePanel extends StatelessWidget {
   }
 }
 
-class _HeaderIcon extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _HeaderIcon({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .16), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white.withValues(alpha: .20))),
-        child: Icon(icon, color: Colors.white),
-      ),
-    );
-  }
-}
-
-
-class _PedidosHeaderButton extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _PedidosHeaderButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Mis pedidos',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(15),
-        child: Container(
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: .16),
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.white.withValues(alpha: .20)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.receipt_long_rounded, color: Colors.white, size: 19),
-              SizedBox(width: 6),
-              Text(
-                'Pedidos',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _NovedadesCarousel extends StatefulWidget {
   final List<dynamic> novedades;
 
-  const _NovedadesCarousel({required this.novedades});
+  const _NovedadesCarousel({
+    required this.novedades,
+  });
 
   @override
   State<_NovedadesCarousel> createState() => _NovedadesCarouselState();
@@ -868,14 +1118,21 @@ class _NovedadesCarouselState extends State<_NovedadesCarousel> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+
     final next = _resolveViewportFraction(MediaQuery.sizeOf(context).width);
     if ((next - _viewportFraction).abs() < .001) return;
-    final currentPage = _controller.hasClients ? (_controller.page?.round() ?? _controller.initialPage) : _controller.initialPage;
+
+    final currentPage = _controller.hasClients
+        ? (_controller.page?.round() ?? _controller.initialPage)
+        : _controller.initialPage;
+
     _controller.dispose();
     _viewportFraction = next;
     _controller = PageController(
       viewportFraction: _viewportFraction,
-      initialPage: widget.novedades.isEmpty ? 0 : currentPage.clamp(0, widget.novedades.length - 1).toInt(),
+      initialPage: widget.novedades.isEmpty
+          ? 0
+          : currentPage.clamp(0, widget.novedades.length - 1).toInt(),
     );
   }
 
@@ -902,7 +1159,12 @@ class _NovedadesCarouselState extends State<_NovedadesCarousel> {
     return _ResponsiveShell(
       maxWidth: 1260,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(isWide ? 18 : 0, 24, isWide ? 18 : 0, 4),
+        padding: EdgeInsets.fromLTRB(
+          isWide ? 18 : 0,
+          24,
+          isWide ? 18 : 0,
+          4,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -914,7 +1176,11 @@ class _NovedadesCarouselState extends State<_NovedadesCarousel> {
                   const SizedBox(width: 12),
                   Text(
                     'Novedades flotantes',
-                    style: TextStyle(color: MoodPalette.text, fontSize: isWide ? 26 : 22, fontWeight: FontWeight.w900),
+                    style: TextStyle(
+                      color: MoodPalette.text,
+                      fontSize: isWide ? 26 : 22,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ],
               ),
@@ -928,23 +1194,34 @@ class _NovedadesCarouselState extends State<_NovedadesCarousel> {
                 itemCount: widget.novedades.length,
                 itemBuilder: (context, index) {
                   final n = widget.novedades[index];
+
                   return AnimatedBuilder(
                     animation: _controller,
                     builder: (context, child) {
                       double page = 0;
-                      if (_controller.hasClients && _controller.position.hasContentDimensions) {
-                        page = _controller.page ?? _controller.initialPage.toDouble();
+
+                      if (_controller.hasClients &&
+                          _controller.position.hasContentDimensions) {
+                        page = _controller.page ??
+                            _controller.initialPage.toDouble();
                       }
+
                       final distance = (page - index).abs().clamp(0.0, 1.0);
                       final scale = 1 - (distance * .055);
                       final lift = 20 * distance;
 
                       return Transform.translate(
                         offset: Offset(0, lift),
-                        child: Transform.scale(scale: scale, child: child),
+                        child: Transform.scale(
+                          scale: scale,
+                          child: child,
+                        ),
                       );
                     },
-                    child: _FloatingNoveltyCard(novedad: n, index: index),
+                    child: _FloatingNoveltyCard(
+                      novedad: n,
+                      index: index,
+                    ),
                   );
                 },
               ),
@@ -960,7 +1237,10 @@ class _FloatingNoveltyCard extends StatelessWidget {
   final dynamic novedad;
   final int index;
 
-  const _FloatingNoveltyCard({required this.novedad, required this.index});
+  const _FloatingNoveltyCard({
+    required this.novedad,
+    required this.index,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -975,7 +1255,11 @@ class _FloatingNoveltyCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: .16), blurRadius: 34, offset: const Offset(0, 22)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: .16),
+              blurRadius: 34,
+              offset: const Offset(0, 22),
+            ),
           ],
           border: Border.all(color: Colors.white.withValues(alpha: .75)),
         ),
@@ -986,21 +1270,41 @@ class _FloatingNoveltyCard extends StatelessWidget {
               child: image.isEmpty
                   ? Container(
                       decoration: const BoxDecoration(
-                        gradient: LinearGradient(colors: [MoodPalette.softPink, MoodPalette.softPurple]),
+                        gradient: LinearGradient(
+                          colors: [
+                            MoodPalette.softPink,
+                            MoodPalette.softPurple,
+                          ],
+                        ),
                       ),
-                      child: const Icon(Icons.auto_awesome_rounded, color: MoodPalette.pink, size: 72),
+                      child: const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: MoodPalette.pink,
+                        size: 72,
+                      ),
                     )
                   : WebSafeNetworkImage(
                       url: image,
                       fit: BoxFit.cover,
-                      errorWidget: Container(color: MoodPalette.softPink, child: const Icon(Icons.image_not_supported_outlined, color: MoodPalette.pink, size: 54)),
+                      errorWidget: Container(
+                        color: MoodPalette.softPink,
+                        child: const Icon(
+                          Icons.image_not_supported_outlined,
+                          color: MoodPalette.pink,
+                          size: 54,
+                        ),
+                      ),
                     ),
             ),
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.black.withValues(alpha: .76), Colors.black.withValues(alpha: .28), Colors.black.withValues(alpha: .10)],
+                    colors: [
+                      Colors.black.withValues(alpha: .76),
+                      Colors.black.withValues(alpha: .28),
+                      Colors.black.withValues(alpha: .10),
+                    ],
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                   ),
@@ -1011,14 +1315,31 @@ class _FloatingNoveltyCard extends StatelessWidget {
               left: 18,
               top: 18,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: .94), borderRadius: BorderRadius.circular(999)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .94),
+                  borderRadius: BorderRadius.circular(999),
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.local_fire_department_rounded, color: MoodPalette.pink, size: 16),
+                    const Icon(
+                      Icons.local_fire_department_rounded,
+                      color: MoodPalette.pink,
+                      size: 16,
+                    ),
                     const SizedBox(width: 6),
-                    Text('Novedad ${index + 1}', style: const TextStyle(color: MoodPalette.pink, fontWeight: FontWeight.w900, fontSize: 12)),
+                    Text(
+                      'Novedad ${index + 1}',
+                      style: const TextStyle(
+                        color: MoodPalette.pink,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1034,7 +1355,12 @@ class _FloatingNoveltyCard extends StatelessWidget {
                     title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 25, height: 1.02),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 25,
+                      height: 1.02,
+                    ),
                   ),
                   if (desc.trim().isNotEmpty) ...[
                     const SizedBox(height: 7),
@@ -1042,7 +1368,11 @@ class _FloatingNoveltyCard extends StatelessWidget {
                       desc,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Colors.white.withValues(alpha: .86), fontWeight: FontWeight.w700, height: 1.32),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .86),
+                        fontWeight: FontWeight.w700,
+                        height: 1.32,
+                      ),
                     ),
                   ],
                 ],
@@ -1055,64 +1385,112 @@ class _FloatingNoveltyCard extends StatelessWidget {
   }
 }
 
-class _CategorySection extends StatelessWidget {
+class _CategoryTitleHeader extends StatelessWidget {
   final String title;
-  final List<ProductoCatalogo> productos;
-  final ValueChanged<ProductoCatalogo> onTap;
+  final int total;
 
-  const _CategorySection({required this.title, required this.productos, required this.onTap});
+  const _CategoryTitleHeader({
+    required this.title,
+    required this.total,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return _ResponsiveShell(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(color: MoodPalette.text, fontSize: 21, fontWeight: FontWeight.w900),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999), boxShadow: [MoodPalette.cardShadow(.05)]),
-                  child: Text('${productos.length} productos', style: const TextStyle(color: MoodPalette.muted, fontWeight: FontWeight.w800, fontSize: 12)),
-                ),
-              ],
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: MoodPalette.text,
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
             ),
-            const SizedBox(height: 14),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
-                final count = width >= 1120 ? 4 : (width >= 820 ? 3 : (width >= 560 ? 2 : 1));
-                final ratio = width >= 1120 ? .76 : (width >= 820 ? .74 : (width >= 560 ? .72 : .82));
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [MoodPalette.cardShadow(.05)],
+          ),
+          child: Text(
+            '$total productos',
+            style: const TextStyle(
+              color: MoodPalette.muted,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  cacheExtent: 420,
-                  itemCount: productos.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: count,
-                    crossAxisSpacing: 18,
-                    mainAxisSpacing: 18,
-                    childAspectRatio: ratio,
-                  ),
-                  itemBuilder: (_, index) => _ProductCard(
-                    producto: productos[index],
-                    onTap: () => onTap(productos[index]),
+class _ProductSliverGrid extends StatelessWidget {
+  final List<ProductoCatalogo> productos;
+  final ValueChanged<ProductoCatalogo> onTap;
+
+  const _ProductSliverGrid({
+    required this.productos,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        const maxWidth = 1220.0;
+        final viewportWidth = constraints.crossAxisExtent;
+        final horizontalPadding = viewportWidth > maxWidth
+            ? ((viewportWidth - maxWidth) / 2) + 18
+            : 18.0;
+        final gridWidth = viewportWidth - (horizontalPadding * 2);
+
+        final count = gridWidth >= 1120
+            ? 4
+            : (gridWidth >= 820 ? 3 : (gridWidth >= 560 ? 2 : 1));
+
+        final ratio = gridWidth >= 1120
+            ? .76
+            : (gridWidth >= 820 ? .74 : (gridWidth >= 560 ? .72 : .82));
+
+        return SliverPadding(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            0,
+            horizontalPadding,
+            28,
+          ),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: count,
+              crossAxisSpacing: 18,
+              mainAxisSpacing: 18,
+              childAspectRatio: ratio,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final producto = productos[index];
+
+                return RepaintBoundary(
+                  child: _ProductCard(
+                    key: ValueKey('producto_${producto.idProducto}'),
+                    producto: producto,
+                    onTap: () => onTap(producto),
                   ),
                 );
               },
+              childCount: productos.length,
+              addAutomaticKeepAlives: false,
+              addRepaintBoundaries: true,
+              addSemanticIndexes: false,
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1121,7 +1499,11 @@ class _ProductCard extends StatefulWidget {
   final ProductoCatalogo producto;
   final VoidCallback onTap;
 
-  const _ProductCard({required this.producto, required this.onTap});
+  const _ProductCard({
+    super.key,
+    required this.producto,
+    required this.onTap,
+  });
 
   @override
   State<_ProductCard> createState() => _ProductCardState();
@@ -1133,9 +1515,13 @@ class _ProductCardState extends State<_ProductCard> {
 
   Future<void> _quickAdd() async {
     if (_saving) return;
+
     setState(() => _saving = true);
 
-    final img = widget.producto.imagenes.isNotEmpty ? widget.producto.imagenes.first : null;
+    final img = widget.producto.imagenes.isNotEmpty
+        ? widget.producto.imagenes.first
+        : null;
+
     final ok = await CartController.instance.agregarProducto(
       productoMasterId: widget.producto.idProducto,
       productoImagenId: _imagenIdFrom(img),
@@ -1143,10 +1529,16 @@ class _ProductCardState extends State<_ProductCard> {
     );
 
     if (!mounted) return;
+
     setState(() => _saving = false);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(ok ? '${widget.producto.nombre} agregado al carrito' : (CartController.instance.error ?? 'No se pudo agregar')),
+        content: Text(
+          ok
+              ? '${widget.producto.nombre} agregado al carrito'
+              : (CartController.instance.error ?? 'No se pudo agregar'),
+        ),
         backgroundColor: ok ? Colors.green : Colors.redAccent,
         behavior: SnackBarBehavior.floating,
       ),
@@ -1170,8 +1562,12 @@ class _ProductCardState extends State<_ProductCard> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
+      onEnter: (_) {
+        if (mounted) setState(() => _hover = true);
+      },
+      onExit: (_) {
+        if (mounted) setState(() => _hover = false);
+      },
       child: AnimatedScale(
         scale: _hover ? 1.012 : 1,
         duration: const Duration(milliseconds: 180),
@@ -1185,10 +1581,16 @@ class _ProductCardState extends State<_ProductCard> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: _hover ? MoodPalette.pink.withValues(alpha: .22) : MoodPalette.softPink),
+                border: Border.all(
+                  color: _hover
+                      ? MoodPalette.pink.withValues(alpha: .22)
+                      : MoodPalette.softPink,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: _hover ? .13 : .07),
+                    color: Colors.black.withValues(
+                      alpha: _hover ? .13 : .07,
+                    ),
                     blurRadius: _hover ? 28 : 18,
                     offset: Offset(0, _hover ? 14 : 8),
                   ),
@@ -1205,7 +1607,14 @@ class _ProductCardState extends State<_ProductCard> {
                         Positioned.fill(
                           child: Container(
                             decoration: const BoxDecoration(
-                              gradient: LinearGradient(colors: [Color(0xFFFFF7FB), Color(0xFFF6EEFF)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                              gradient: LinearGradient(
+                                colors: [
+                                  Color(0xFFFFF7FB),
+                                  Color(0xFFF6EEFF),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(18),
@@ -1213,7 +1622,11 @@ class _ProductCardState extends State<_ProductCard> {
                                 url: widget.producto.imagenPrincipal,
                                 width: double.infinity,
                                 fit: BoxFit.contain,
-                                errorWidget: const Icon(Icons.image_not_supported_outlined, color: MoodPalette.pink, size: 54),
+                                errorWidget: const Icon(
+                                  Icons.image_not_supported_outlined,
+                                  color: MoodPalette.pink,
+                                  size: 54,
+                                ),
                               ),
                             ),
                           ),
@@ -1222,14 +1635,31 @@ class _ProductCardState extends State<_ProductCard> {
                           left: 14,
                           top: 14,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: .94), borderRadius: BorderRadius.circular(999)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 11,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: .94),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.verified_rounded, color: MoodPalette.pink, size: 15),
+                                Icon(
+                                  Icons.verified_rounded,
+                                  color: MoodPalette.pink,
+                                  size: 15,
+                                ),
                                 SizedBox(width: 6),
-                                Text('Pro', style: TextStyle(color: MoodPalette.pink, fontWeight: FontWeight.w900, fontSize: 11)),
+                                Text(
+                                  'Pro',
+                                  style: TextStyle(
+                                    color: MoodPalette.pink,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 11,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -1239,10 +1669,23 @@ class _ProductCardState extends State<_ProductCard> {
                           bottom: 14,
                           child: IconButton.filled(
                             onPressed: _saving ? null : _quickAdd,
-                            style: IconButton.styleFrom(backgroundColor: MoodPalette.pink, foregroundColor: Colors.white),
+                            style: IconButton.styleFrom(
+                              backgroundColor: MoodPalette.pink,
+                              foregroundColor: Colors.white,
+                            ),
                             icon: _saving
-                                ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : const Icon(Icons.add_shopping_cart_rounded, size: 20),
+                                ? const SizedBox(
+                                    width: 17,
+                                    height: 17,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.add_shopping_cart_rounded,
+                                    size: 20,
+                                  ),
                           ),
                         ),
                       ],
@@ -1259,7 +1702,12 @@ class _ProductCardState extends State<_ProductCard> {
                             widget.producto.nombre,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w900, color: MoodPalette.text, fontSize: 17, height: 1.12),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: MoodPalette.text,
+                              fontSize: 17,
+                              height: 1.12,
+                            ),
                           ),
                           const SizedBox(height: 7),
                           Expanded(
@@ -1267,7 +1715,11 @@ class _ProductCardState extends State<_ProductCard> {
                               widget.producto.descripcion,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: MoodPalette.muted, height: 1.32, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                color: MoodPalette.muted,
+                                height: 1.32,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -1276,12 +1728,27 @@ class _ProductCardState extends State<_ProductCard> {
                               Expanded(
                                 child: Text(
                                   '\$ ${widget.producto.precioFinal.toStringAsFixed(2)}',
-                                  style: const TextStyle(color: MoodPalette.pink, fontWeight: FontWeight.w900, fontSize: 20),
+                                  style: const TextStyle(
+                                    color: MoodPalette.pink,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 20,
+                                  ),
                                 ),
                               ),
-                              const Text('Ver detalle', style: TextStyle(color: MoodPalette.muted, fontWeight: FontWeight.w800, fontSize: 12)),
+                              const Text(
+                                'Ver detalle',
+                                style: TextStyle(
+                                  color: MoodPalette.muted,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                ),
+                              ),
                               const SizedBox(width: 4),
-                              const Icon(Icons.arrow_forward_rounded, color: MoodPalette.pink, size: 17),
+                              const Icon(
+                                Icons.arrow_forward_rounded,
+                                color: MoodPalette.pink,
+                                size: 17,
+                              ),
                             ],
                           ),
                         ],
@@ -1302,7 +1769,10 @@ class _ProductDetailSheet extends StatefulWidget {
   final ProductoCatalogo producto;
   final VoidCallback onOpenCart;
 
-  const _ProductDetailSheet({required this.producto, required this.onOpenCart});
+  const _ProductDetailSheet({
+    required this.producto,
+    required this.onOpenCart,
+  });
 
   @override
   State<_ProductDetailSheet> createState() => _ProductDetailSheetState();
@@ -1315,21 +1785,33 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
 
   Future<void> _agregar() async {
     setState(() => saving = true);
-    final img = widget.producto.imagenes.isNotEmpty ? widget.producto.imagenes[imgIndex] : null;
+
+    final img = widget.producto.imagenes.isNotEmpty
+        ? widget.producto.imagenes[imgIndex]
+        : null;
+
     final ok = await CartController.instance.agregarProducto(
       productoMasterId: widget.producto.idProducto,
       productoImagenId: _imagenIdFrom(img),
       cantidad: cantidad,
     );
+
     if (!mounted) return;
+
     setState(() => saving = false);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(ok ? 'Producto agregado al carrito' : (CartController.instance.error ?? 'No se pudo agregar')),
+        content: Text(
+          ok
+              ? 'Producto agregado al carrito'
+              : (CartController.instance.error ?? 'No se pudo agregar'),
+        ),
         backgroundColor: ok ? Colors.green : Colors.redAccent,
         behavior: SnackBarBehavior.floating,
       ),
     );
+
     if (ok) Navigator.pop(context);
   }
 
@@ -1348,15 +1830,24 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
   }
 
   String _imageUrlFrom(dynamic image) {
-    if (image is Map<String, dynamic>) return (image['imagen_url'] ?? '').toString();
-    if (image is Map) return (image['imagen_url'] ?? '').toString();
+    if (image is Map<String, dynamic>) {
+      return (image['imagen_url'] ?? '').toString();
+    }
+
+    if (image is Map) {
+      return (image['imagen_url'] ?? '').toString();
+    }
+
     return '';
   }
 
   @override
   Widget build(BuildContext context) {
     final imgs = widget.producto.imagenes;
-    final current = imgs.isNotEmpty ? _imageUrlFrom(imgs[imgIndex]) : widget.producto.imagenPrincipal;
+    final current = imgs.isNotEmpty
+        ? _imageUrlFrom(imgs[imgIndex])
+        : widget.producto.imagenPrincipal;
+
     final width = MediaQuery.sizeOf(context).width;
     final isWide = width >= 860;
 
@@ -1366,17 +1857,34 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
       maxChildSize: .97,
       expand: false,
       builder: (_, controller) => Container(
-        decoration: const BoxDecoration(color: MoodPalette.background, borderRadius: BorderRadius.vertical(top: Radius.circular(34))),
+        decoration: const BoxDecoration(
+          color: MoodPalette.background,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(34)),
+        ),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1120),
             child: SingleChildScrollView(
               controller: controller,
-              padding: EdgeInsets.fromLTRB(isWide ? 24 : 18, 16, isWide ? 24 : 18, 28),
+              padding: EdgeInsets.fromLTRB(
+                isWide ? 24 : 18,
+                16,
+                isWide ? 24 : 18,
+                28,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(child: Container(width: 56, height: 5, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(99)))),
+                  Center(
+                    child: Container(
+                      width: 56,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 18),
                   Builder(
                     builder: (context) {
@@ -1387,11 +1895,14 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
                         onImage: (index) => setState(() => imgIndex = index),
                         isWide: isWide,
                       );
+
                       final info = _DetailInfo(
                         producto: widget.producto,
                         cantidad: cantidad,
                         saving: saving,
-                        onMinus: cantidad > 1 ? () => setState(() => cantidad--) : null,
+                        onMinus: cantidad > 1
+                            ? () => setState(() => cantidad--)
+                            : null,
                         onPlus: () => setState(() => cantidad++),
                         onAdd: _agregar,
                         onOpenCart: widget.onOpenCart,
@@ -1400,7 +1911,11 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
                       if (!isWide) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [gallery, const SizedBox(height: 22), info],
+                          children: [
+                            gallery,
+                            const SizedBox(height: 22),
+                            info,
+                          ],
                         );
                       }
 
@@ -1440,8 +1955,14 @@ class _DetailGallery extends StatelessWidget {
   });
 
   String _imageUrlFrom(dynamic image) {
-    if (image is Map<String, dynamic>) return (image['imagen_url'] ?? '').toString();
-    if (image is Map) return (image['imagen_url'] ?? '').toString();
+    if (image is Map<String, dynamic>) {
+      return (image['imagen_url'] ?? '').toString();
+    }
+
+    if (image is Map) {
+      return (image['imagen_url'] ?? '').toString();
+    }
+
     return '';
   }
 
@@ -1463,11 +1984,24 @@ class _DetailGallery extends StatelessWidget {
               Positioned.fill(
                 child: Container(
                   decoration: const BoxDecoration(
-                    gradient: LinearGradient(colors: [Color(0xFFFFF7FB), Color(0xFFF6EEFF)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                    gradient: LinearGradient(
+                      colors: [Color(0xFFFFF7FB), Color(0xFFF6EEFF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                   ),
                   child: Padding(
                     padding: EdgeInsets.all(isWide ? 30 : 18),
-                    child: WebSafeNetworkImage(url: current, fit: BoxFit.contain, width: double.infinity, errorWidget: const Icon(Icons.image_outlined, color: MoodPalette.pink, size: 70)),
+                    child: WebSafeNetworkImage(
+                      url: current,
+                      fit: BoxFit.contain,
+                      width: double.infinity,
+                      errorWidget: const Icon(
+                        Icons.image_outlined,
+                        color: MoodPalette.pink,
+                        size: 70,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1475,14 +2009,31 @@ class _DetailGallery extends StatelessWidget {
                 left: 18,
                 top: 18,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: .94), borderRadius: BorderRadius.circular(999)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .94),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.touch_app_rounded, color: MoodPalette.pink, size: 16),
+                      Icon(
+                        Icons.touch_app_rounded,
+                        color: MoodPalette.pink,
+                        size: 16,
+                      ),
                       SizedBox(width: 6),
-                      Text('Vista grande', style: TextStyle(color: MoodPalette.pink, fontWeight: FontWeight.w900, fontSize: 12)),
+                      Text(
+                        'Vista grande',
+                        style: TextStyle(
+                          color: MoodPalette.pink,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1501,6 +2052,7 @@ class _DetailGallery extends StatelessWidget {
               itemBuilder: (_, index) {
                 final url = _imageUrlFrom(images[index]);
                 final selected = index == imgIndex;
+
                 return GestureDetector(
                   onTap: () => onImage(index),
                   child: AnimatedContainer(
@@ -1509,11 +2061,20 @@ class _DetailGallery extends StatelessWidget {
                     padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: selected ? MoodPalette.pink : Colors.grey.shade200, width: selected ? 2 : 1),
+                      border: Border.all(
+                        color: selected
+                            ? MoodPalette.pink
+                            : Colors.grey.shade200,
+                        width: selected ? 2 : 1,
+                      ),
                       color: Colors.white,
                       boxShadow: selected ? [MoodPalette.cardShadow(.08)] : null,
                     ),
-                    child: WebSafeNetworkImage(url: url, fit: BoxFit.contain, borderRadius: BorderRadius.circular(16)),
+                    child: WebSafeNetworkImage(
+                      url: url,
+                      fit: BoxFit.contain,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 );
               },
@@ -1561,26 +2122,72 @@ class _DetailInfo extends StatelessWidget {
             children: [
               const _SectionEyebrow(),
               const Spacer(),
-              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded),
+              ),
             ],
           ),
           const SizedBox(height: 18),
-          Text(producto.nombre, style: const TextStyle(fontSize: 28, height: 1.05, fontWeight: FontWeight.w900, color: MoodPalette.text)),
+          Text(
+            producto.nombre,
+            style: const TextStyle(
+              fontSize: 28,
+              height: 1.05,
+              fontWeight: FontWeight.w900,
+              color: MoodPalette.text,
+            ),
+          ),
           const SizedBox(height: 10),
-          Text(producto.descripcion, style: const TextStyle(color: MoodPalette.muted, height: 1.5, fontWeight: FontWeight.w600)),
+          Text(
+            producto.descripcion,
+            style: const TextStyle(
+              color: MoodPalette.muted,
+              height: 1.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 18),
-          Text('\$ ${producto.precioFinal.toStringAsFixed(2)}', style: const TextStyle(color: MoodPalette.pink, fontSize: 34, fontWeight: FontWeight.w900)),
+          Text(
+            '\$ ${producto.precioFinal.toStringAsFixed(2)}',
+            style: const TextStyle(
+              color: MoodPalette.pink,
+              fontSize: 34,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 18),
           Container(
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: MoodPalette.softPink, borderRadius: BorderRadius.circular(22)),
+            decoration: BoxDecoration(
+              color: MoodPalette.softPink,
+              borderRadius: BorderRadius.circular(22),
+            ),
             child: Row(
               children: [
-                const Text('Cantidad', style: TextStyle(fontWeight: FontWeight.w900, color: MoodPalette.text)),
+                const Text(
+                  'Cantidad',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: MoodPalette.text,
+                  ),
+                ),
                 const Spacer(),
-                IconButton(onPressed: onMinus, icon: const Icon(Icons.remove_circle_outline_rounded)),
-                Text('$cantidad', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-                IconButton(onPressed: onPlus, icon: const Icon(Icons.add_circle_outline_rounded)),
+                IconButton(
+                  onPressed: onMinus,
+                  icon: const Icon(Icons.remove_circle_outline_rounded),
+                ),
+                Text(
+                  '$cantidad',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                  ),
+                ),
+                IconButton(
+                  onPressed: onPlus,
+                  icon: const Icon(Icons.add_circle_outline_rounded),
+                ),
               ],
             ),
           ),
@@ -1589,9 +2196,25 @@ class _DetailInfo extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: saving ? null : onAdd,
-              icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.shopping_bag_rounded),
+              icon: saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.shopping_bag_rounded),
               label: Text(saving ? 'Agregando...' : 'Agregar al carrito'),
-              style: ElevatedButton.styleFrom(backgroundColor: MoodPalette.pink, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 17), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: MoodPalette.pink,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 17),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -1604,7 +2227,13 @@ class _DetailInfo extends StatelessWidget {
               },
               icon: const Icon(Icons.shopping_cart_checkout_rounded),
               label: const Text('Ir al carrito'),
-              style: OutlinedButton.styleFrom(foregroundColor: MoodPalette.pink, padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: MoodPalette.pink,
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
             ),
           ),
         ],
@@ -1616,7 +2245,11 @@ class _DetailInfo extends StatelessWidget {
 class _MyAccountSheet extends StatefulWidget {
   final String userName;
   final VoidCallback onLogout;
-  const _MyAccountSheet({required this.userName, required this.onLogout});
+
+  const _MyAccountSheet({
+    required this.userName,
+    required this.onLogout,
+  });
 
   @override
   State<_MyAccountSheet> createState() => _MyAccountSheetState();
@@ -1646,20 +2279,47 @@ class _MyAccountSheetState extends State<_MyAccountSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(color: MoodPalette.background, borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
-      padding: EdgeInsets.fromLTRB(18, 18, 18, MediaQuery.of(context).viewInsets.bottom + 24),
+      decoration: const BoxDecoration(
+        color: MoodPalette.background,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        18,
+        18,
+        18,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
       child: controller.loading
-          ? const SizedBox(height: 320, child: Center(child: CircularProgressIndicator(color: MoodPalette.pink)))
+          ? const SizedBox(
+              height: 320,
+              child: Center(
+                child: CircularProgressIndicator(color: MoodPalette.pink),
+              ),
+            )
           : SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.person_rounded, color: MoodPalette.pink),
+                      const Icon(
+                        Icons.person_rounded,
+                        color: MoodPalette.pink,
+                      ),
                       const SizedBox(width: 8),
-                      Expanded(child: Text('My Account - ${widget.userName}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20))),
-                      IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
+                      Expanded(
+                        child: Text(
+                          'My Account - ${widget.userName}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -1669,11 +2329,26 @@ class _MyAccountSheetState extends State<_MyAccountSheet> {
                     onSubmit: (datos) async {
                       final ok = await controller.guardarDatos(datos);
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Datos guardados correctamente' : controller.error ?? 'Error'), backgroundColor: ok ? Colors.green : Colors.redAccent));
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            ok
+                                ? 'Datos guardados correctamente'
+                                : controller.error ?? 'Error',
+                          ),
+                          backgroundColor:
+                              ok ? Colors.green : Colors.redAccent,
+                        ),
+                      );
                     },
                   ),
                   const SizedBox(height: 12),
-                  OutlinedButton.icon(onPressed: widget.onLogout, icon: const Icon(Icons.logout_rounded), label: const Text('Cerrar sesión')),
+                  OutlinedButton.icon(
+                    onPressed: widget.onLogout,
+                    icon: const Icon(Icons.logout_rounded),
+                    label: const Text('Cerrar sesión'),
+                  ),
                 ],
               ),
             ),
@@ -1685,7 +2360,12 @@ class _CustomerForm extends StatefulWidget {
   final DatosClienteModel? initial;
   final List<dynamic> departamentos;
   final Future<void> Function(DatosClienteModel datos) onSubmit;
-  const _CustomerForm({this.initial, required this.departamentos, required this.onSubmit});
+
+  const _CustomerForm({
+    this.initial,
+    required this.departamentos,
+    required this.onSubmit,
+  });
 
   @override
   State<_CustomerForm> createState() => _CustomerFormState();
@@ -1724,8 +2404,20 @@ class _CustomerFormState extends State<_CustomerForm> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => saving = true);
-    await widget.onSubmit(DatosClienteModel(nombres: nombres.text.trim(), apellidos: apellidos.text.trim(), telefono: telefono.text.trim(), direccion: direccion.text.trim(), referencia: referencia.text.trim(), departamentoId: departamentoId));
+
+    await widget.onSubmit(
+      DatosClienteModel(
+        nombres: nombres.text.trim(),
+        apellidos: apellidos.text.trim(),
+        telefono: telefono.text.trim(),
+        direccion: direccion.text.trim(),
+        referencia: referencia.text.trim(),
+        departamentoId: departamentoId,
+      ),
+    );
+
     if (mounted) setState(() => saving = false);
   }
 
@@ -1735,25 +2427,75 @@ class _CustomerFormState extends State<_CustomerForm> {
       key: _formKey,
       child: Column(
         children: [
-          _field(nombres, 'Nombres', Icons.person_outline, required: true),
-          _field(apellidos, 'Apellidos', Icons.badge_outlined),
-          _field(telefono, 'Teléfono', Icons.phone_outlined, required: true, keyboard: TextInputType.phone),
+          _field(
+            nombres,
+            'Nombres',
+            Icons.person_outline,
+            required: true,
+          ),
+          _field(
+            apellidos,
+            'Apellidos',
+            Icons.badge_outlined,
+          ),
+          _field(
+            telefono,
+            'Teléfono',
+            Icons.phone_outlined,
+            required: true,
+            keyboard: TextInputType.phone,
+          ),
           DropdownButtonFormField<int>(
             value: departamentoId,
-            decoration: _decoration('Departamento / zona', Icons.location_city_outlined),
-            items: widget.departamentos.map((d) => DropdownMenuItem<int>(value: d.id, child: Text(d.nombre))).toList(),
+            decoration: _decoration(
+              'Departamento / zona',
+              Icons.location_city_outlined,
+            ),
+            items: widget.departamentos
+                .map(
+                  (d) => DropdownMenuItem<int>(
+                    value: d.id,
+                    child: Text(d.nombre),
+                  ),
+                )
+                .toList(),
             onChanged: (value) => setState(() => departamentoId = value),
           ),
-          _field(direccion, 'Dirección', Icons.home_outlined, required: true),
-          _field(referencia, 'Referencia', Icons.notes_outlined),
+          _field(
+            direccion,
+            'Dirección',
+            Icons.home_outlined,
+            required: true,
+          ),
+          _field(
+            referencia,
+            'Referencia',
+            Icons.notes_outlined,
+          ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: saving ? null : _save,
-              icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.save_rounded),
+              icon: saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.save_rounded),
               label: Text(saving ? 'Guardando...' : 'Guardar datos'),
-              style: ElevatedButton.styleFrom(backgroundColor: MoodPalette.pink, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: MoodPalette.pink,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
             ),
           ),
         ],
@@ -1761,31 +2503,48 @@ class _CustomerFormState extends State<_CustomerForm> {
     );
   }
 
-  Widget _field(TextEditingController c, String label, IconData icon, {bool required = false, TextInputType? keyboard}) {
+  Widget _field(
+    TextEditingController c,
+    String label,
+    IconData icon, {
+    bool required = false,
+    TextInputType? keyboard,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextFormField(
         controller: c,
         keyboardType: keyboard,
-        validator: required ? (v) => (v ?? '').trim().isEmpty ? 'Obligatorio' : null : null,
+        validator: required
+            ? (v) => (v ?? '').trim().isEmpty ? 'Obligatorio' : null
+            : null,
         decoration: _decoration(label, icon),
       ),
     );
   }
 
-  InputDecoration _decoration(String label, IconData icon) => InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-      );
+  InputDecoration _decoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon),
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
 }
 
 class _ErrorState extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
-  const _ErrorState({required this.message, required this.onRetry});
+
+  const _ErrorState({
+    required this.message,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1795,11 +2554,22 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded, color: Colors.redAccent, size: 70),
+            const Icon(
+              Icons.cloud_off_rounded,
+              color: Colors.redAccent,
+              size: 70,
+            ),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh_rounded), label: const Text('Reintentar')),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Reintentar'),
+            ),
           ],
         ),
       ),

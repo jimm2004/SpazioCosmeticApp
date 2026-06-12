@@ -9,6 +9,67 @@ import '../models/catalogo/tarifa_envio_model.dart';
 import '../models/catalogo/ubicacion_model.dart';
 import 'api_service.dart';
 
+class CatalogoProductosResponse {
+  final List<ProductoCatalogo> data;
+  final int currentPage;
+  final int perPage;
+  final int lastPage;
+  final int total;
+
+  const CatalogoProductosResponse({
+    required this.data,
+    required this.currentPage,
+    required this.perPage,
+    required this.lastPage,
+    required this.total,
+  });
+
+  bool get hasMore => currentPage < lastPage;
+
+  factory CatalogoProductosResponse.fromApi(
+    dynamic response, {
+    required int requestedPage,
+    required int requestedPerPage,
+  }) {
+    final root = response is Map ? Map<String, dynamic>.from(response) : <String, dynamic>{};
+    final list = CatalogoService.parseListFromResponse(response);
+
+    final currentPage = _toInt(
+      root['current_page'] ?? root['page'] ?? root['pagina'],
+      fallback: requestedPage,
+    );
+
+    final perPage = _toInt(
+      root['per_page'] ?? root['perPage'] ?? root['limite'],
+      fallback: requestedPerPage,
+    );
+
+    final totalFallback = list.length + ((currentPage - 1) * perPage);
+    final total = _toInt(root['total'], fallback: totalFallback);
+
+    final computedLastPage = perPage <= 0 ? currentPage : ((total + perPage - 1) ~/ perPage);
+    final lastPage = _toInt(
+      root['last_page'] ?? root['lastPage'] ?? root['ultima_pagina'],
+      fallback: computedLastPage <= 0 ? currentPage : computedLastPage,
+    );
+
+    return CatalogoProductosResponse(
+      data: list.map(ProductoCatalogo.fromJson).toList(),
+      currentPage: currentPage <= 0 ? 1 : currentPage,
+      perPage: perPage <= 0 ? requestedPerPage : perPage,
+      lastPage: lastPage <= 0 ? 1 : lastPage,
+      total: total < 0 ? list.length : total,
+    );
+  }
+
+  static int _toInt(dynamic value, {required int fallback}) {
+    if (value == null) return fallback;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString()) ?? fallback;
+  }
+}
+
 class CatalogoService {
   final ApiService _api = ApiService();
 
@@ -25,21 +86,73 @@ class CatalogoService {
    * CATÁLOGO
    * -------------------------------------------------------------------------- */
 
-  Future<List<ProductoCatalogo>> obtenerProductos({String buscar = '', int limite = 200, int? categoriaId}) async {
-    final query = <String, dynamic>{'limite': limite};
+  Future<CatalogoProductosResponse> obtenerProductosPaginado({
+    String buscar = '',
+    int page = 1,
+    int perPage = 24,
+    int? categoriaId,
+  }) async {
+    final safePage = page <= 0 ? 1 : page;
+    final safePerPage = perPage.clamp(1, 40).toInt();
+
+    final query = <String, dynamic>{
+      'page': safePage,
+      'per_page': safePerPage,
+      // Compatibilidad con el backend actual, que todavía usa "limite".
+      'limite': safePerPage,
+    };
+
     if (buscar.trim().isNotEmpty) query['buscar'] = buscar.trim();
     if (categoriaId != null && categoriaId > 0) query['id_categoria'] = categoriaId;
+
     final response = await _api.get(_withQuery('/api/catalogo/productos', query));
-    return _parseList(response).map(ProductoCatalogo.fromJson).toList();
+
+    return CatalogoProductosResponse.fromApi(
+      response,
+      requestedPage: safePage,
+      requestedPerPage: safePerPage,
+    );
+  }
+
+  Future<List<ProductoCatalogo>> obtenerProductos({
+    String buscar = '',
+    int limite = 24,
+    int? categoriaId,
+  }) async {
+    final response = await obtenerProductosPaginado(
+      buscar: buscar,
+      page: 1,
+      perPage: limite,
+      categoriaId: categoriaId,
+    );
+
+    return response.data;
+  }
+
+  Future<CatalogoProductosResponse> buscarProductosPaginado(
+    String nombre, {
+    int page = 1,
+    int perPage = 24,
+  }) {
+    return obtenerProductosPaginado(
+      buscar: nombre.trim(),
+      page: page,
+      perPage: perPage,
+    );
   }
 
   Future<List<ProductoCatalogo>> buscarProductos(String nombre) async {
     final text = nombre.trim();
     if (text.isEmpty) return obtenerProductos();
-    final response = await _api.get('/api/catalogo/buscar/${Uri.encodeComponent(text)}');
-    return _parseList(response).map(ProductoCatalogo.fromJson).toList();
-  }
 
+    final response = await buscarProductosPaginado(
+      text,
+      page: 1,
+      perPage: 24,
+    );
+
+    return response.data;
+  }
 
   Future<List<Map<String, dynamic>>> obtenerCategoriasCatalogo() async {
     final response = await _api.get('/api/catalogo/categorias');
@@ -145,8 +258,14 @@ class CatalogoService {
     return CarritoModel.fromJson(_asMap(response));
   }
 
-  Future<CarritoModel> editarItemCarrito({required int detalleId, required int cantidad}) async {
-    final response = await _api.put('/api/carrito/items/$detalleId', body: {'cantidad': cantidad});
+  Future<CarritoModel> editarItemCarrito({
+    required int detalleId,
+    required int cantidad,
+  }) async {
+    final response = await _api.put(
+      '/api/carrito/items/$detalleId',
+      body: {'cantidad': cantidad},
+    );
     return CarritoModel.fromJson(_asMap(response));
   }
 
@@ -246,10 +365,29 @@ class CatalogoService {
   }
 
   List<Map<String, dynamic>> _parseList(dynamic response) {
+    return parseListFromResponse(response);
+  }
+
+  static List<Map<String, dynamic>> parseListFromResponse(dynamic response) {
     dynamic data = response;
+
     if (response is Map && response['data'] != null) data = response['data'];
     if (response is Map && response['items'] != null) data = response['items'];
+
+    if (data is Map && data['data'] != null) data = data['data'];
+    if (data is Map && data['items'] != null) data = data['items'];
+
     if (data is! List) return <Map<String, dynamic>>[];
-    return data.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+
+    return data
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
   }
+  Future<bool> cancelarPedidoRechazado(int pedidoId) async {
+  final response = await _api.delete('/api/pedidos/$pedidoId/cancelar-rechazado');
+  final map = _asMap(response);
+  return map['ok'] == true;
+}
+
 }

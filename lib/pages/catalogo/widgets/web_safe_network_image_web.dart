@@ -1,4 +1,5 @@
 // ignore_for_file: avoid_web_libraries_in_flutter
+
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 
@@ -15,11 +16,17 @@ class WebSafeNetworkImage extends StatefulWidget {
   final Color? backgroundColor;
   final BorderRadius? borderRadius;
 
-  /// Si es true, NO crea el <img> hasta que el widget entra al viewport.
-  /// Esto evita cientos de peticiones de imágenes al abrir catálogo/pedidos.
+  /// Si es true, el <img> HTML no se crea hasta que el widget entra al viewport.
+  /// Esto reduce cientos de GET al abrir catálogo, pedidos o grids largos.
   final bool loadOnlyWhenVisible;
 
+  /// Si el usuario va haciendo scroll rápido, retrasa la imagen unos milisegundos.
   final bool deferWhileScrolling;
+
+  /// Tamaño sugerido para navegadores que respetan width/height en el elemento.
+  /// No recorta la imagen; solo ayuda al layout del HTML.
+  final int? cacheWidth;
+  final int? cacheHeight;
 
   const WebSafeNetworkImage({
     super.key,
@@ -33,19 +40,26 @@ class WebSafeNetworkImage extends StatefulWidget {
     this.borderRadius,
     this.loadOnlyWhenVisible = true,
     this.deferWhileScrolling = true,
+    this.cacheWidth,
+    this.cacheHeight,
   });
 
   @override
   State<WebSafeNetworkImage> createState() => _WebSafeNetworkImageState();
 }
 
-class _WebSafeNetworkImageState extends State<WebSafeNetworkImage> {
+class _WebSafeNetworkImageState extends State<WebSafeNetworkImage>
+    with AutomaticKeepAliveClientMixin {
   static final Set<String> _registeredViewTypes = <String>{};
 
   late final Key _visibilityKey = UniqueKey();
   late String _viewType;
+
   bool _shouldLoad = false;
   bool _scheduledAfterScroll = false;
+
+  @override
+  bool get wantKeepAlive => _shouldLoad;
 
   @override
   void initState() {
@@ -58,42 +72,72 @@ class _WebSafeNetworkImageState extends State<WebSafeNetworkImage> {
   @override
   void didUpdateWidget(covariant WebSafeNetworkImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url || oldWidget.fit != widget.fit) {
-      _shouldLoad = !widget.loadOnlyWhenVisible;
-      _scheduledAfterScroll = false;
-      _buildViewType();
-      if (_shouldLoad) _registerView();
-    }
+
+    final changed = oldWidget.url != widget.url ||
+        oldWidget.fit != widget.fit ||
+        oldWidget.cacheWidth != widget.cacheWidth ||
+        oldWidget.cacheHeight != widget.cacheHeight;
+
+    if (!changed) return;
+
+    _shouldLoad = !widget.loadOnlyWhenVisible;
+    _scheduledAfterScroll = false;
+    _buildViewType();
+
+    if (_shouldLoad) _registerView();
+    updateKeepAlive();
   }
 
   void _buildViewType() {
-    final cleanUrl = (widget.url ?? '').trim();
-    _viewType = 'mood-safe-img-${cleanUrl.hashCode}-${widget.fit.name}-${widget.width ?? 0}-${widget.height ?? 0}';
+    final cleanUrl = _cleanUrl(widget.url);
+    final hash = Object.hash(
+      cleanUrl,
+      widget.fit.name,
+      widget.cacheWidth ?? 0,
+      widget.cacheHeight ?? 0,
+    );
+
+    _viewType = 'mood-safe-img-$hash';
   }
 
   void _markVisible(VisibilityInfo info) {
     if (_shouldLoad || !mounted) return;
     if (info.visibleFraction <= 0.01) return;
+
     _registerView();
-    setState(() => _shouldLoad = true);
+
+    setState(() {
+      _shouldLoad = true;
+    });
+
+    updateKeepAlive();
   }
 
   void _scheduleAfterFastScroll() {
     if (_scheduledAfterScroll || _shouldLoad || !mounted) return;
+
     _scheduledAfterScroll = true;
+
     Future<void>.delayed(const Duration(milliseconds: 180), () {
       if (!mounted || _shouldLoad) return;
+
       _registerView();
+
       setState(() {
         _shouldLoad = true;
         _scheduledAfterScroll = false;
       });
+
+      updateKeepAlive();
     });
   }
 
   void _registerView() {
-    final cleanUrl = (widget.url ?? '').trim();
+    final cleanUrl = _cleanUrl(widget.url);
+
+    if (cleanUrl.isEmpty) return;
     if (_registeredViewTypes.contains(_viewType)) return;
+
     _registeredViewTypes.add(_viewType);
 
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {
@@ -105,11 +149,6 @@ class _WebSafeNetworkImageState extends State<WebSafeNetworkImage> {
         ..style.alignItems = 'center'
         ..style.justifyContent = 'center'
         ..style.backgroundColor = 'transparent';
-
-      if (cleanUrl.isEmpty || cleanUrl.toLowerCase() == 'null') {
-        wrapper.text = '';
-        return wrapper;
-      }
 
       final img = html.ImageElement()
         ..src = cleanUrl
@@ -128,6 +167,14 @@ class _WebSafeNetworkImageState extends State<WebSafeNetworkImage> {
         ..setAttribute('draggable', 'false')
         ..setAttribute('referrerpolicy', 'no-referrer');
 
+      if (widget.cacheWidth != null && widget.cacheWidth! > 0) {
+        img.width = widget.cacheWidth!;
+      }
+
+      if (widget.cacheHeight != null && widget.cacheHeight! > 0) {
+        img.height = widget.cacheHeight!;
+      }
+
       wrapper.children.add(img);
       return wrapper;
     });
@@ -135,19 +182,30 @@ class _WebSafeNetworkImageState extends State<WebSafeNetworkImage> {
 
   @override
   Widget build(BuildContext context) {
-    final cleanUrl = (widget.url ?? '').trim();
-    final fallback = widget.errorWidget ?? const Icon(Icons.image_not_supported_outlined, color: Colors.grey);
+    super.build(context);
+
+    final cleanUrl = _cleanUrl(widget.url);
+    final fallback = widget.errorWidget ??
+        const Icon(
+          Icons.image_not_supported_outlined,
+          color: Colors.grey,
+        );
 
     Widget body;
-    if (cleanUrl.isEmpty || cleanUrl.toLowerCase() == 'null') {
+
+    if (cleanUrl.isEmpty) {
       body = Center(child: fallback);
     } else if (!_shouldLoad) {
-      body = widget.loadingWidget ?? _ImageSkeleton(backgroundColor: widget.backgroundColor);
+      body = widget.loadingWidget ??
+          _ImageSkeleton(backgroundColor: widget.backgroundColor);
     } else {
-      final shouldDefer = widget.deferWhileScrolling && Scrollable.recommendDeferredLoadingForContext(context);
+      final shouldDefer =
+          widget.deferWhileScrolling && Scrollable.recommendDeferredLoadingForContext(context);
+
       if (shouldDefer) {
         _scheduleAfterFastScroll();
-        body = widget.loadingWidget ?? _ImageSkeleton(backgroundColor: widget.backgroundColor);
+        body = widget.loadingWidget ??
+            _ImageSkeleton(backgroundColor: widget.backgroundColor);
       } else {
         _registerView();
         body = HtmlElementView(viewType: _viewType);
@@ -162,10 +220,15 @@ class _WebSafeNetworkImageState extends State<WebSafeNetworkImage> {
     );
 
     if (widget.borderRadius != null) {
-      boxed = ClipRRect(borderRadius: widget.borderRadius!, child: boxed);
+      boxed = ClipRRect(
+        borderRadius: widget.borderRadius!,
+        child: boxed,
+      );
     }
 
-    if (!widget.loadOnlyWhenVisible || _shouldLoad || cleanUrl.isEmpty) return boxed;
+    if (!widget.loadOnlyWhenVisible || _shouldLoad || cleanUrl.isEmpty) {
+      return boxed;
+    }
 
     return VisibilityDetector(
       key: _visibilityKey,
@@ -177,15 +240,28 @@ class _WebSafeNetworkImageState extends State<WebSafeNetworkImage> {
 
 class _ImageSkeleton extends StatelessWidget {
   final Color? backgroundColor;
+
   const _ImageSkeleton({this.backgroundColor});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: backgroundColor ?? const Color(0xFFF7F3F6),
-      child: const Center(child: Icon(Icons.image_outlined, color: Colors.black26, size: 34)),
+      child: const Center(
+        child: Icon(
+          Icons.image_outlined,
+          color: Colors.black26,
+          size: 34,
+        ),
+      ),
     );
   }
+}
+
+String _cleanUrl(String? value) {
+  final text = (value ?? '').trim();
+  if (text.isEmpty || text.toLowerCase() == 'null') return '';
+  return text;
 }
 
 String _objectFit(BoxFit fit) {

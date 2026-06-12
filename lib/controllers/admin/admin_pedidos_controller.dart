@@ -157,8 +157,6 @@ class AdminPedidosController extends ChangeNotifier {
     }
   }
 
-  /// Carga el detalle completo del pedido y lo adapta para la vista/PDF de despacho.
-  /// Este método hace solo 1 GET al endpoint /admin/pedidos/{id}.
   Future<DespachoDocumentoData?> prepararDocumentoDespacho(int pedidoId) async {
     preparingDespacho = true;
     error = null;
@@ -229,6 +227,25 @@ class AdminPedidosController extends ChangeNotifier {
       await cargarPendientesDespacho();
     } catch (e) {
       error = _parseError(e);
+      loading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> limpiarRechazoPedido(int pedidoId) async {
+    loading = true;
+    error = null;
+    lastMessage = null;
+    notifyListeners();
+
+    try {
+      lastMessage = await service.limpiarRechazoPedido(pedidoId);
+      await cargarRechazadosContabilidad();
+      return true;
+    } catch (e) {
+      error = _parseError(e);
+      return false;
+    } finally {
       loading = false;
       notifyListeners();
     }
